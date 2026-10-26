@@ -1,0 +1,45 @@
+{
+  "name": "pil-cargo-claims",
+  "version": "1.0.0",
+  "description": "Pacific International Lines (PIL) Cargo Claim & Survey Management Platform",
+  "main": "server/src/index.ts",
+  "scripts": {
+    "dev:server": "tsx watch server/src/index.ts",
+    "dev:client": "npm --prefix client run dev",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:client",
+    "start": "tsx server/src/index.ts"
+  },
+  "keywords": [
+    "pil",
+    "cargo",
+    "claims",
+    "surveys",
+    "logistics"
+  ],
+  "author": "Antigravity",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
+    "pg": "^8.23.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^25.5.0",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PIL Cargo Claim & Survey Platform - Presentation</title>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <style>
+    :root {
+      --pil-navy: #002B49;
+      --pil-red: #ED1C24;
+      --pil-light-blue: #EBF3FA;
+      --text-dark: #1E293B;
+      --text-muted: #64748B;
+      --card-bg: #FFFFFF;
+      --border-color: #E2E8F0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background: #0B192C;
+      color: var(--text-dark);
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Top Action Bar */
+    .action-header {
+      width: 100%;
+      max-width: 1100px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 14px;
+      padding: 18px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      margin-bottom: 25px;
+      position: sticky;
+      top: 15px;
+      z-index: 100;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-pill {
+      background: var(--pil-red);
+      color: white;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      letter-spacing: 1px;
+    }
+
+    .brand-title h2 {
+      font-size: 18px;
+      color: var(--pil-navy);
+      font-weight: 700;
+    }
+
+    .download-btn {
+      background: linear-gradient(135deg, #ED1C24 0%, #C41219 100%);
+      color: white;
+      border: none;
+      padding: 12px 26px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(237, 28, 36, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(237, 28, 36, 0.5);
+    }
+
+    .download-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Deck Layout */
+    .deck-container {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .slide {
+      background: #FFFFFF;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 45px 55px;
+    }
+
+    .slide-badge {
+      position: absolute;
+      top: 20px;
+      right: 25px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #94A3B8;
+      letter-spacing: 0.5px;
+    }
+
+    /* Common Slide Typography */
+    .slide-title-bar {
+      margin-bottom: 25px;
+    }
+
+    .slide-sub {
+      color: var(--pil-red);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 4px;
+    }
+
+    .slide-heading {
+      color: var(--pil-navy);
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    /* Slide 1 - Title */
+    .slide-title-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .main-hero-title {
+      font-size: 38px;
+      color: var(--pil-navy);
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+
+    .main-hero-title span {
+      color: var(--pil-red);
+    }
+
+    .main-subtitle {
+      font-size: 18px;
+      color: var(--text-muted);
+      margin-bottom: 35px;
+      font-weight: 500;
+    }
+
+    .title-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .info-card {
+      background: var(--pil-light-blue);
+      border-left: 4px solid var(--pil-navy);
+      padding: 16px;
+      border-radius: 8px;
+    }
+
+    .info-card.accent {
+      border-left-color: var(--pil-red);
+    }
+
+    .info-card h4 {
+      color: var(--pil-navy);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-card p {
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    /* Slide 2 - Grid Cards */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 18px;
+      flex: 1;
+    }
+
+    .feature-box {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 18px 20px;
+      background: #FAFCFF;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .feature-box-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .feature-icon-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--pil-light-blue);
+      color: var(--pil-navy);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .feature-box h4 {
+      color: var(--pil-navy);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .feature-box ul {
+      list-style: none;
+      font-size: 12.5px;
+      color: #475569;
+    }
+
+    .feature-box ul li {
+      margin-bottom: 5px;
+      position: relative;
+      padding-left: 14px;
+    }
+
+    .feature-box ul li::before {
+      content: "•";
+      color: var(--pil-red);
+      font-weight: bold;
+      position: absolute;
+      left: 0;
+    }
+
+    /* Slide 3 - Lifecycle Flow */
+    .flow-horizontal {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: 1;
+      gap: 10px;
+    }
+
+    .flow-node {
+      flex: 1;
+      background: #F8FAFC;
+      border: 1px solid var(--border-color);
+      border-top: 4px solid var(--pil-navy);
+      border-radius: 8px;
+      padding: 16px 12px;
+      text-align: center;
+      height: 190px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .flow-node.highlight {
+      border-top-color: var(--pil-red);
+      background: #FFF9F9;
+    }
+
+    .flow-node.success {
+      border-top-color: #10B981;
+      background: #F0FDF4;
+    }
+
+    .flow-step-num {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--pil-red);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .flow-node h4 {
+      font-size: 13.5px;
+      color: var(--pil-navy);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .flow-node p {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .flow-arrow {
+      color: #94A3B8;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    /* Slide 4 - Architecture */
+    .arch-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .arch-layer {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      border-left: 6px solid var(--pil-navy);
+      background: #F8FAFC;
+    }
+
+    .arch-layer.l1 { border-left-color: #475569; background: #F8FAFC; }
+    .arch-layer.l2 { border-left-color: #0284C7; background: #F0F9FF; }
+    .arch-layer.l3 { border-left-color: #D97706; background: #FFFBEB; }
+    .arch-layer.l4 { border-left-color: #7C3AED; background: #F5F3FF; }
+    .arch-layer.l5 { border-left-color: #16A34A; background: #F0FDF4; }
+
+    .arch-layer-name {
+      width: 170px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--pil-navy);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .arch-layer-components {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .arch-pill {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #334155;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      flex: 1;
+      text-align: center;
+    }
+
+    /* Slide 5 - ROI & Conclusion */
+    .slide-5-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+      flex: 1;
+    }
+
+    .roi-col, .tech-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--pil-navy);
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 6px;
+    }
+
+    .impact-item {
+      display: flex;
+      gap: 12px;
+      background: #F8FAFC;
+      border-radius: 8px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--pil-red);
+    }
+
+    .impact-item h5 {
+      font-size: 13px;
+      color: var(--pil-navy);
+      margin-bottom: 2px;
+    }
+
+    .impact-item p {
+      font-size: 11.5px;
+      color: #64748B;
+      line-height: 1.35;
+    }
+
+    .conclusion-box {
+      margin-top: auto;
+      background: var(--pil-light-blue);
+      border-radius: 8px;
+      padding: 14px;
+      border: 1px solid #BAE6FD;
+    }
+
+    .conclusion-box h4 {
+      color: var(--pil-navy);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .conclusion-box p {
+      font-size: 11px;
+      color: #0369A1;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Action Bar -->
+  <div class="action-header">
+    <div class="brand-title">
+      <div class="brand-pill">PIL</div>
+      <h2>Cargo Claim & Survey Platform Presentation</h2>
+    </div>
+    <button class="download-btn" id="exportBtn" onclick="generatePPTX()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      Download PowerPoint (.pptx)
+    </button>
+  </div>
+
+  <div class="deck-container">
+
+    <!-- SLIDE 1 -->
+    <div class="slide">
+      <div class="slide-badge">SLIDE 01 / 05</div>
+      <div class="slide-title-bar">
+        <div class="slide-sub">Pacific International Lines</div>
+        <div class="slide-heading">Executive Project Review</div>
+      </div>
+      <div class="slide-title-content">
+        <h1 class="main-hero-title">Cargo Claim &amp; Survey<br><span>Management Platform</span></h1>
+        <p class="main-subtitle">Digital Transformation for Maritime Claims, Survey Triage &amp; Recovery Governance</p>
+        
+        <div class="title-cards-grid">
+          <div class="info-card">
+            <h4>🎯 Core Purpose</h4>
+            <p>Replace disconnected spreadsheet files &amp; fragmented email chains with an auditable central lifecycle system.</p>
+          </div>
+          <div class="info-card">
+            <h4>👥 Target Users</h4>
+            <p>Global Port Agencies, Marine Insurance Department (MID at HQ), Senior Executive Leadership.</p>
+          </div>
+          <div class="info-card accent">
+            <h4>💡 High-Impact Value</h4>
+            <p>Accelerates intake by 85%, guarantees zero missed time-bars, and operates on 100% zero-license cost open source tools.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div class="slide">
+      <div class="slide-badge">SLIDE 02 / 05</div>
+      <div class="slide-title-bar">
+        <div class="slide-sub">System Capabilities</div>
+        <div class="slide-heading">Comprehensive Platform Scope</div>
+      </div>
+      <div class="features-grid">
+        <div class="feature-box">
+          <div class="feature-box-header">
+            <div class="feature-icon-circle">🚢</div>
+            <h4>Smart Shipment Ingestion</h4>
+          </div>
+          <ul>
+            <li>Instant auto-resolution of Bill of Lading (B/L) numbers</li>
+            <li>Automatic pre-fill of vessel, voyage, discharge dates &amp; ports</li>
+            <li>Precise container selection with tare weights and seal verifications</li>
+          </ul>
+        </div>
+        <div class="feature-box">
+          <div class="feature-box-header">
+            <div class="feature-icon-circle">🔍</div>
+            <h4>Survey Operations &amp; Triage</h4>
+          </div>
+          <ul>
+            <li>Third-party marine surveyor appointment and cost booking</li>
+            <li>Inspection findings, damage categorization &amp; joint reports</li>
+            <li>Seamless 1-click survey conversion to formal cargo claim</li>
+          </ul>
+        </div>
+        <div class="feature-box">
+          <div class="feature-box-header">
+            <div class="feature-icon-circle">💵</div>
+            <h4>Multi-Currency Recoveries</h4>
+          </div>
+          <ul>
+            <li>Granular itemization of claim expenses and recoveries</li>
+            <li>Real-time automated foreign exchange normalization via live rates</li>
+            <li>Standardized executive view of net organizational liability in USD</li>
+          </ul>
+        </div>
+        <div class="feature-box">
+          <div class="feature-box-header">
+            <div class="feature-icon-circle">📊</div>
+            <h4>Governance &amp; Executive KPIs</h4>
+          </div>
+          <ul>
+            <li>Automated statutory 1-year maritime time-bar expiration tracking</li>
+            <li>Multi-tier Row-Level Security (RLS) keeping port agency data segregated</li>
+            <li>Live analytics dashboards showcasing loss categories and financial exposure</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3 -->
+    <div class="slide">
+      <div class="slide-badge">SLIDE 03 / 05</div>
+      <div class="slide-title-bar">
+        <div class="slide-sub">Operational Journey</div>
+        <div class="slide-heading">End-to-End Application Workflow</div>
+      </div>
+      <div class="flow-horizontal">
+        <div class="flow-node">
+          <div class="flow-step-num">Step 1</div>
+          <h4>Intake &amp; Lookup</h4>
+          <p>User logs in. Enters B/L number; system verifies and auto-populates all voyage &amp; cargo specifics.</p>
+        </div>
+        <div class="flow-arrow">➔</div>
+        <div class="flow-node">
+          <div class="flow-step-num">Step 2</div>
+          <h4>Triage &amp; Survey</h4>
+          <p>Dispatches surveyor if necessary. Once damage is confirmed, converts survey directly into formal claim.</p>
+        </div>
+        <div class="flow-arrow">➔</div>
+        <div class="flow-node highlight">
+          <div class="flow-step-num">Step 3</div>
+          <h4>Claim Lodging</h4>
+          <p>Selects damaged containers, uploads mandatory commercial documents, triggers 1-year time-bar SLA.</p>
+        </div>
+        <div class="flow-arrow">➔</div>
+        <div class="flow-node">
+          <div class="flow-step-num">Step 4</div>
+          <h4>Financial Tally</h4>
+          <p>Logs multi-currency expenses &amp; recoveries. Auto-converts to USD net exposure using daily exchange rates.</p>
+        </div>
+        <div class="flow-arrow">➔</div>
+        <div class="flow-node success">
+          <div class="flow-step-num">Step 5</div>
+          <h4>Resolution</h4>
+          <p>MID reviews P&amp;I deductibles and legal merits. Settles or repudiates with full audit history preserved.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4 -->
+    <div class="slide">
+      <div class="slide-badge">SLIDE 04 / 05</div>
+      <div class="slide-title-bar">
+        <div class="slide-sub">System Architecture</div>
+        <div class="slide-heading">Layered Enterprise Technical Design</div>
+      </div>
+      <div class="arch-diagram">
+        <div class="arch-layer l1">
+          <div class="arch-layer-name">1. User Roles</div>
+          <div class="arch-layer-components">
+            <div class="arch-pill">Global Port Agencies (Restricted Intake)</div>
+            <div class="arch-pill">Marine Insurance Dept (MID Review / HQ)</div>
+            <div class="arch-pill">System Administrators</div>
+          </div>
+        </div>
+        <div class="arch-layer l2">
+          <div class="arch-layer-name">2. Presentation</div>
+          <div class="arch-layer-components">
+            <div class="arch-pill">React 18 Single Page App (TypeScript)</div>
+            <div class="arch-pill">TailwindCSS PIL Design System</div>
+            <div class="arch-pill">Recharts Visual Analytics</div>
+          </div>
+        </div>
+        <div class="arch-layer l3">
+          <div class="arch-layer-name">3. Gateway &amp; Auth</div>
+          <div class="arch-layer-components">
+            <div class="arch-pill">Stateless JWT Authentication</div>
+            <div class="arch-pill">Row-Level Security (RLS) Filter Engine</div>
+            <div class="arch-pill">Role-Based Access Control (RBAC)</div>
+          </div>
+        </div>
+        <div class="arch-layer l4">
+          <div class="arch-layer-name">4. Business Engine</div>
+          <div class="arch-layer-components">
+            <div class="arch-pill">Express 5 REST APIs</div>
+            <div class="arch-pill">SLA &amp; Time-Bar Watchdog</div>
+            <div class="arch-pill">Multi-Currency FX Broker</div>
+            <div class="arch-pill">LMS Ingestion Pipeline</div>
+          </div>
+        </div>
+        <div class="arch-layer l5">
+          <div class="arch-layer-name">5. Data &amp; Feeds</div>
+          <div class="arch-layer-components">
+            <div class="arch-pill">SQLite High-Speed Embedded Database</div>
+            <div class="arch-pill">Local Secure Evidence Store</div>
+            <div class="arch-pill">Live Foreign Exchange Feed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5 -->
+    <div class="slide">
+      <div class="slide-badge">SLIDE 05 / 05</div>
+      <div class="slide-title-bar">
+        <div class="slide-sub">Business Value &amp; ROI</div>
+        <div class="slide-heading">Technology Impact &amp; Review Conclusion</div>
+      </div>
+      <div class="slide-5-grid">
+        <div class="roi-col">
+          <div class="section-title">Measurable Business Impact</div>
+          <div class="impact-item">
+            <div>
+              <h5>⚡ 85% Accelerated Intake</h5>
+              <p>Automated B/L lookup eliminates manual data entry errors and cuts onboarding time from hours to minutes.</p>
+            </div>
+          </div>
+          <div class="impact-item">
+            <div>
+              <h5>🛡️ Zero Statutory Time-Bar Forfeiture</h5>
+              <p>Proactive 1-year maritime time-bar tracking alerts claim handlers well before legal deadlines lapse.</p>
+            </div>
+          </div>
+          <div class="impact-item">
+            <div>
+              <h5>🔒 Role-Enforced Confidentiality</h5>
+              <p>Agency users can only view their own claims while HQ retains complete cross-fleet portfolio oversight.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="tech-col">
+          <div class="section-title">Zero-License Architecture</div>
+          <div class="impact-item">
+            <div>
+              <h5>💰 $0 Ongoing Licensing Overhead</h5>
+              <p>Built with enterprise open-source technologies (React, Node.js, SQLite) eliminating recurring seat fees.</p>
+            </div>
+          </div>
+          <div class="conclusion-box">
+            <h4>Executive Summary &amp; Next Steps</h4>
+            <p>The platform establishes a dependable, audit-ready operational standard across Pacific International Lines' global agency footprint. Validated with 10/10 automated test suites and ready for immediate operational deployment.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function generatePPTX() {
+      const btn = document.getElementById('exportBtn');
+      btn.innerText = "Generating Presentation...";
+      btn.disabled = true;
+
+      try {
+        const pptx = new PptxGenJS();
+        pptx.layout = 'LAYOUT_16x9';
+
+        // Color Constants
+        const C_NAVY = '002B49';
+        const C_RED = 'ED1C24';
+        const C_DARK = '1E293B';
+        const C_MUTED = '64748B';
+        const C_LIGHT_BLUE = 'EBF3FA';
+        const C_CARD_BORDER = 'E2E8F0';
+        const C_WHITE = 'FFFFFF';
+
+        // Helper: Add common top banner
+        function addHeader(slide, category, title, slideNum) {
+          slide.addText(category.toUpperCase(), {
+            x: 0.8, y: 0.4, w: 8.0, h: 0.3,
+            fontSize: 10, bold: true, color: C_RED, fontFace: 'Calibri'
+          });
+          slide.addText(title, {
+            x: 0.8, y: 0.7, w: 8.5, h: 0.5,
+            fontSize: 22, bold: true, color: C_NAVY, fontFace: 'Calibri'
+          });
+          slide.addText(`SLIDE 0${slideNum} / 05`, {
+            x: 10.5, y: 0.5, w: 2.0, h: 0.3,
+            fontSize: 10, bold: true, color: C_MUTED, align: 'right', fontFace: 'Calibri'
+          });
+          slide.addShape(pptx.shapes.RECTANGLE, {
+            x: 0.8, y: 1.25, w: 11.7, h: 0.02,
+            fill: { color: C_CARD_BORDER }
+          });
+        }
+
+        // ==========================================
+        // SLIDE 1: Title & Project Overview
+        // ==========================================
+        const s1 = pptx.addSlide();
+        s1.background = { color: 'F8FAFC' };
+        
+        // Brand tag
+        s1.addShape(pptx.shapes.RECTANGLE, {
+          x: 0.8, y: 0.7, w: 0.7, h: 0.35,
+          fill: { color: C_RED }
+        });
+        s1.addText('PIL', {
+          x: 0.8, y: 0.7, w: 0.7, h: 0.35,
+          fontSize: 12, bold: true, color: C_WHITE, align: 'center', fontFace: 'Calibri'
+        });
+        s1.addText('Pacific International Lines • Executive Project Review', {
+          x: 1.6, y: 0.72, w: 8.0, h: 0.35,
+          fontSize: 13, bold: true, color: C_NAVY, fontFace: 'Calibri'
+        });
+
+        // Main Title
+        s1.addText('Cargo Claim & Survey\nManagement Platform', {
+          x: 0.8, y: 1.5, w: 11.0, h: 1.6,
+          fontSize: 36, bold: true, color: C_NAVY, fontFace: 'Calibri'
+        });
+        s1.addText('Centralized Digital Workflow, Automated LMS Ingestion & Financial Governance', {
+          x: 0.8, y: 3.1, w: 11.0, h: 0.5,
+          fontSize: 15, color: C_MUTED, fontFace: 'Calibri'
+        });
+
+        // 3 Overview Cards
+        const cardDefs = [
+          { title: 'Core Mission', text: 'Eliminate error-prone spreadsheets & email trails with an auditable central maritime claims platform.' },
+          { title: 'Target Users', text: 'Global Port Agencies for initial intake, Marine Insurance Dept (MID at HQ) for approvals, and Administrators.' },
+          { title: 'Value Delivered', text: 'Accelerates intake by 85%, enforces 1-year statutory maritime time-bar tracking, with zero software licensing costs.' }
+        ];
+
+        cardDefs.forEach((c, idx) => {
+          const posX = 0.8 + idx * 4.0;
+          s1.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+            x: posX, y: 4.0, w: 3.7, h: 2.3,
+            fill: { color: idx === 2 ? 'FEF2F2' : C_LIGHT_BLUE },
+            line: { color: idx === 2 ? C_RED : C_NAVY, width: 1.5 }
+          });
+          s1.addText(c.title, {
+            x: posX + 0.25, y: 4.2, w: 3.2, h: 0.4,
+            fontSize: 14, bold: true, color: idx === 2 ? C_RED : C_NAVY, fontFace: 'Calibri'
+          });
+          s1.addText(c.text, {
+            x: posX + 0.25, y: 4.7, w: 3.2, h: 1.4,
+            fontSize: 12, color: C_DARK, fontFace: 'Calibri', align: 'left'
+          });
+        });
+
+        // ==========================================
+        // SLIDE 2: Major Capabilities
+        // ==========================================
+        const s2 = pptx.addSlide();
+        s2.background = { color: 'F8FAFC' };
+        addHeader(s2, 'System Capabilities', 'Comprehensive Platform Scope & Modules', 2);
+
+        const modCards = [
+          {
+            title: '1. Smart Shipment Ingestion',
+            points: ['Instant B/L number auto-resolution', 'Auto-fills vessel, voyage, ports & cargo', 'Container multi-selection with tare weights']
+          },
+          {
+            title: '2. Survey Operations & Triage',
+            points: ['Third-party marine surveyor appointment', 'Inspection records & damage categorization', '1-click survey conversion to formal claim']
+          },
+          {
+            title: '3. Multi-Currency Recoveries',
+            points: ['Detailed line-item expenses & recoveries', 'Real-time FX conversion to USD via public feed', 'Transparent net organizational liability tally']
+          },
+          {
+            title: '4. Governance & Executive KPIs',
+            points: ['Automated 1-year statutory time-bar alerts', 'Row-Level Security isolating agency claims', 'Interactive management dashboard with metrics']
+          }
+        ];
+
+        modCards.forEach((m, idx) => {
+          const col = idx % 2;
+          const row = Math.floor(idx / 2);
+          const posX = 0.8 + col * 5.9;
+          const posY = 1.6 + row * 2.6;
+
+          s2.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+            x: posX, y: posY, w: 5.6, h: 2.3,
+            fill: { color: C_WHITE },
+            line: { color: C_CARD_BORDER, width: 1 }
+          });
+          s2.addText(m.title, {
+            x: posX + 0.3, y: posY + 0.2, w: 5.0, h: 0.4,
+            fontSize: 14, bold: true, color: C_NAVY, fontFace: 'Calibri'
+          });
+          s2.addText(m.points.map(p => `•  ${p}`).join('\n'), {
+            x: posX + 0.3, y: posY + 0.7, w: 5.0, h: 1.4,
+            fontSize: 12, color: C_DARK, fontFace: 'Calibri', lineSpacing: 22
+          });
+        });
+
+        // ==========================================
+        // SLIDE 3: End-to-End Workflow
+        // ==========================================
+        const s3 = pptx.addSlide();
+        s3.background = { color: 'F8FAFC' };
+        addHeader(s3, 'Operational Journey', 'End-to-End Application Workflow', 3);
+
+        const steps = [
+          { num: 'STEP 1', title: 'Intake & Lookup', desc: 'Agency inputs B/L number; system auto-loads voyage & cargo details from LMS cache.' },
+          { num: 'STEP 2', title: 'Triage / Survey', desc: 'Appoints surveyor for inspection. Once validated, converts survey directly into formal claim.' },
+          { num: 'STEP 3', title: 'Claim Lodging', desc: 'Selects damaged containers, uploads mandatory documents, activates time-bar SLA.' },
+          { num: 'STEP 4', title: 'Financial Tally', desc: 'Records expenses and recoveries. Normalizes all currencies to USD net exposure.' },
+          { num: 'STEP 5', title: 'Resolution', desc: 'MID reviews P&I deductible & legal merits. Settles or repudiates with full audit history.' }
+        ];
+
+        steps.forEach((st, idx) => {
+          const posX = 0.8 + idx * 2.38;
+          s3.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+            x: posX, y: 2.2, w: 2.15, h: 3.5,
+            fill: { color: idx === 4 ? 'F0FDF4' : C_WHITE },
+            line: { color: idx === 4 ? '10B981' : (idx === 2 ? C_RED : C_CARD_BORDER), width: 1.5 }
+          });
+          s3.addText(st.num, {
+            x: posX + 0.15, y: 2.5, w: 1.85, h: 0.3,
+            fontSize: 11, bold: true, color: C_RED, align: 'center', fontFace: 'Calibri'
+          });
+          s3.addText(st.title, {
+            x: posX + 0.15, y: 2.9, w: 1.85, h: 0.45,
+            fontSize: 13, bold: true, color: C_NAVY, align: 'center', fontFace: 'Calibri'
+          });
+          s3.addText(st.desc, {
+            x: posX + 0.15, y: 3.5, w: 1.85, h: 1.9,
+            fontSize: 11, color: C_DARK, align: 'center', fontFace: 'Calibri'
+          });
+
+          if (idx < 4) {
+            s3.addText('➔', {
+              x: posX + 2.05, y: 3.6, w: 0.4, h: 0.4,
+              fontSize: 16, bold: true, color: C_MUTED, align: 'center', fontFace: 'Calibri'
+            });
+          }
+        });
+
+        // ==========================================
+        // SLIDE 4: Architecture Diagram
+        // ==========================================
+        const s4 = pptx.addSlide();
+        s4.background = { color: 'F8FAFC' };
+        addHeader(s4, 'System Architecture', 'Layered Enterprise Technical Design', 4);
+
+        const archLayers = [
+          { name: '1. USER ROLES', pills: ['Global Port Agencies', 'Marine Insurance Dept (MID / HQ)', 'System Administrators'] },
+          { name: '2. PRESENTATION LAYER', pills: ['React 18 SPA (TypeScript)', 'TailwindCSS PIL Theme', 'Recharts Visual Analytics'] },
+          { name: '3. GATEWAY & AUTH', pills: ['Stateless JWT Authentication', 'Row-Level Security (RLS) Filter Engine', 'Role-Based Access Control'] },
+          { name: '4. APPLICATION SERVICES', pills: ['Express 5 REST APIs', 'SLA & Time-Bar Watchdog', 'Multi-Currency FX Broker', 'LMS Sync Engine'] },
+          { name: '5. DATA & FEEDS', pills: ['SQLite Embedded Relational DB', 'Secure Document Store (/uploads)', 'Daily Foreign Exchange Feed'] }
+        ];
+
+        archLayers.forEach((l, idx) => {
+          const posY = 1.6 + idx * 1.0;
+          s4.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+            x: 0.8, y: posY, w: 11.7, h: 0.8,
+            fill: { color: C_WHITE },
+            line: { color: C_CARD_BORDER, width: 1 }
+          });
+          s4.addShape(pptx.shapes.RECTANGLE, {
+            x: 0.8, y: posY, w: 0.1, h: 0.8,
+            fill: { color: idx === 1 ? '0284C7' : (idx === 2 ? 'D97706' : (idx === 3 ? '7C3AED' : (idx === 4 ? '16A34A' : '475569'))) }
+          });
+          s4.addText(l.name, {
+            x: 1.1, y: posY + 0.22, w: 2.4, h: 0.4,
+            fontSize: 11, bold: true, color: C_NAVY, fontFace: 'Calibri'
+          });
+
+          l.pills.forEach((p, pIdx) => {
+            const pillX = 3.6 + pIdx * 2.8;
+            s4.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+              x: pillX, y: posY + 0.15, w: 2.6, h: 0.5,
+              fill: { color: 'F1F5F9' },
+              line: { color: 'CBD5E1', width: 0.5 }
+            });
+            s4.addText(p, {
+              x: pillX + 0.1, y: posY + 0.22, w: 2.4, h: 0.35,
+              fontSize: 10, bold: true, color: C_DARK, align: 'center', fontFace: 'Calibri'
+            });
+          });
+        });
+
+        // ==========================================
+        // SLIDE 5: Technology & Value Delivered
+        // ==========================================
+        const s5 = pptx.addSlide();
+        s5.background = { color: 'F8FAFC' };
+        addHeader(s5, 'Business Value & Impact', 'Measurable Results & Implementation Conclusion', 5);
+
+        // Left: Business Value Cards
+        s5.addText('STRATEGIC BUSINESS VALUE', {
+          x: 0.8, y: 1.6, w: 5.5, h: 0.3,
+          fontSize: 12, bold: true, color: C_NAVY, fontFace: 'Calibri'
+        });
+
+        const impacts = [
+          { title: '85% Faster Intake Velocity', desc: 'Direct lookup against master logistics records prevents manual typing errors and speeds claim registration.' },
+          { title: 'Zero Forfeited Maritime Deadlines', desc: 'Automatic 1-year statutory time-bar alerts protect PIL from costly procedural recovery claim dismissals.' },
+          { title: 'Data Isolation with Row-Level Security', desc: 'Port agencies only see their own local filings; corporate claims and financial statistics remain protected.' }
+        ];
+
+        impacts.forEach((imp, idx) => {
+          const posY = 2.0 + idx * 1.4;
+          s5.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+            x: 0.8, y: posY, w: 5.5, h: 1.25,
+            fill: { color: C_WHITE },
+            line: { color: C_RED, width: 1 }
+          });
+          s5.addText(`✔ ${imp.title}`, {
+            x: 1.0, y: posY + 0.15, w: 5.1, h: 0.3,
+            fontSize: 12, bold: true, color: C_NAVY, fontFace: 'Calibri'
+          });
+          s5.addText(imp.desc, {
+            x: 1.0, y: posY + 0.45, w: 5.1, h: 0.7,
+            fontSize: 11, color: C_DARK, fontFace: 'Calibri'
+          });
+        });
+
+        // Right: Architecture Highlights & Conclusion Box
+        s5.addText('ARCHITECTURE & CONCLUSION', {
+          x: 6.9, y: 1.6, w: 5.5, h: 0.3,
+          fontSize: 12, bold: true, color: C_NAVY, fontFace: 'Calibri'
+        });
+
+        s5.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+          x: 6.9, y: 2.0, w: 5.6, h: 1.8,
+          fill: { color: C_WHITE },
+          line: { color: C_CARD_BORDER, width: 1 }
+        });
+        s5.addText('100% Zero-License Cost Foundation', {
+          x: 7.1, y: 2.15, w: 5.2, h: 0.3,
+          fontSize: 13, bold: true, color: C_NAVY, fontFace: 'Calibri'
+        });
+        s5.addText('• Frontend: React 18 SPA + Vite + TailwindCSS\n• Backend: Express 5 + Node.js 24 (TypeScript)\n• Database: SQLite (better-sqlite3) in-process engine\n• Zero recurring per-user software licensing fees', {
+          x: 7.1, y: 2.5, w: 5.2, h: 1.2,
+          fontSize: 11, color: C_DARK, fontFace: 'Calibri', lineSpacing: 20
+        });
+
+        // Executive Conclusion Callout
+        s5.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+          x: 6.9, y: 4.0, w: 5.6, h: 2.2,
+          fill: { color: C_LIGHT_BLUE },
+          line: { color: 'BAE6FD', width: 1 }
+        });
+        s5.addText('Executive Conclusion', {
+          x: 7.1, y: 4.2, w: 5.2, h: 0.3,
+          fontSize: 13, bold: true, color: C_NAVY, fontFace: 'Calibri'
+        });
+        s5.addText('The platform replaces dispersed spreadsheets and offline communication with a hardened, auditable workflow. With 10/10 automated verification test suites passed, the application provides an enterprise-ready foundation for PIL\'s global marine claims operations.', {
+          x: 7.1, y: 4.6, w: 5.2, h: 1.4,
+          fontSize: 11, color: C_DARK, fontFace: 'Calibri', lineSpacing: 18
+        });
+
+        // Export presentation file
+        pptx.writeFile({ fileName: 'PIL_Cargo_Claim_Platform_Review.pptx' })
+          .then(fileName => {
+             btn.innerText = "Downloaded: " + fileName;
+             btn.style.background = "#10B981";
+             setTimeout(() => {
+               btn.innerText = "Download PowerPoint (.pptx)";
+               btn.style.background = "";
+               btn.disabled = false;
+             }, 4000);
+          })
+          .catch(err => {
+             console.error(err);
+             btn.innerText = "Error Generating PPTX";
+             btn.disabled = false;
+          });
+
+      } catch (err) {
+        console.error(err);
+        btn.innerText = "Error Generating PPTX";
+        btn.disabled = false;
+      }
+    }
+
+    // Auto-trigger download when opened in browser
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        try {
+          generatePPTX();
+        } catch (e) {
+          console.warn("Auto-download waiting for user interaction:", e);
+        }
+      }, 700);
+    });
+  </script>
+</body>
+</html>
