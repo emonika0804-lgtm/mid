@@ -9,20 +9,48 @@ types.setTypeParser(1700, (val: string) => (val === null ? null : parseFloat(val
 // Load .env from project root
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-// Dedicated application runtime user (uses least-privilege pil_app_user instead of postgres superuser)
-const runtimeDbUser = process.env.DB_APP_USER || (process.env.DB_USER === 'postgres' ? 'pil_app_user' : (process.env.DB_USER || 'pil_app_user'));
+// ─── Connection Config ─────────────────────────────────────────────────────────
+// Priority 1: DATABASE_URL connection string (Neon, Railway, Render, Heroku etc.)
+// Priority 2: Separate DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD / DB_SSL vars (local PostgreSQL)
+//
+// For Neon, set:
+//   DATABASE_URL=postgresql://neondb_owner:<password>@<host>.neon.tech/neondb?sslmode=require
+//
+// IMPORTANT: When DATABASE_URL is set, DB_APP_USER / DB_USER are IGNORED — the
+// connection user is embedded in the DATABASE_URL itself.
 
-export const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  database: process.env.DB_NAME || 'pil_claims_db',
-  user: runtimeDbUser,
-  password: process.env.DB_PASSWORD || '',
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
-});
+function buildPoolConfig() {
+  if (process.env.DATABASE_URL) {
+    // Cloud-hosted PostgreSQL via connection string (Neon, etc.)
+    return {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }, // Required for Neon / cloud PostgreSQL
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    };
+  }
+
+  // Dedicated application runtime user for local PostgreSQL.
+  // Uses DB_APP_USER if set; otherwise falls back to DB_USER.
+  // Does NOT substitute pil_app_user when DB_USER is explicitly provided,
+  // to avoid connection failures when pil_app_user role doesn't exist.
+  const runtimeDbUser = process.env.DB_APP_USER || process.env.DB_USER || 'postgres';
+
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    database: process.env.DB_NAME || 'pil_claims_db',
+    user: runtimeDbUser,
+    password: process.env.DB_PASSWORD || '',
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  };
+}
+
+export const pool = new Pool(buildPoolConfig());
 
 pool.on('error', (err) => {
   console.error('[PostgreSQL] Unexpected client error on idle connection:', err);
@@ -53,7 +81,7 @@ export async function initPgDatabase() {
     );
     const existingCount = parseInt(checkRes.rows[0].count, 10);
     if (existingCount >= 3) {
-      console.log(`[PostgreSQL] Database tables verified and active for user: ${runtimeDbUser}.`);
+      console.log('[PostgreSQL] Database tables verified and active.');
       return;
     }
 
