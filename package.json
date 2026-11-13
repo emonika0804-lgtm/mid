@@ -8,6 +8,8 @@
     "dev:client": "npm --prefix client run dev",
     "build:client": "npm --prefix client run build",
     "build": "npm run build:client",
+    "test": "tsx tests/run_all_tests.ts",
+    "test:all": "tsx tests/run_all_tests.ts",
     "start": "tsx server/src/index.ts"
   },
   "keywords": [
@@ -25,9 +27,14 @@
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
+    "nodemailer": "^10.2.1",
     "pg": "^8.23.1",
+    "swagger-ui-express": "^5.0.1",
+    "tsx": "^4.21.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
@@ -38,8 +45,10 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.5.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "@types/swagger-ui-express": "^4.1.8",
+    "typescript": "^5.9.3",
+    "yaml": "^2.9.1"
   }
 }
