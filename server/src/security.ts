@@ -191,6 +191,32 @@ export function validateUploadedFile(file: { originalname: string; mimetype: str
       const isJpg = magic[0] === 0xFF && magic[1] === 0xD8 && magic[2] === 0xFF;
       if (!isJpg) return { valid: false, error: 'File signature mismatch: File claims to be JPEG but binary header is invalid.' };
     }
+
+    // Modern Office / ZIP formats (.docx, .xlsx, .zip): PK\x03\x04 (0x50 0x4B 0x03 0x04)
+    if (ext === '.docx' || ext === '.xlsx' || ext === '.zip') {
+      const isZip = magic[0] === 0x50 && magic[1] === 0x4B && magic[2] === 0x03 && magic[3] === 0x04;
+      if (!isZip) return { valid: false, error: 'File signature mismatch: File claims to be Office OpenXML or ZIP archive but binary header is invalid.' };
+    }
+
+    // Legacy Office formats (.doc, .xls): OLE2 compound document (0xD0 0xCF 0x11 0xE0 0xA1 0xB1 0x1A 0xE1)
+    if (ext === '.doc' || ext === '.xls') {
+      if (file.buffer.length < 8) {
+        return { valid: false, error: 'File signature mismatch: File claims to be legacy Office document (.doc/.xls) but binary header is truncated.' };
+      }
+      const oleMagic = file.buffer.subarray(0, 8);
+      const isOle2 =
+        oleMagic[0] === 0xD0 &&
+        oleMagic[1] === 0xCF &&
+        oleMagic[2] === 0x11 &&
+        oleMagic[3] === 0xE0 &&
+        oleMagic[4] === 0xA1 &&
+        oleMagic[5] === 0xB1 &&
+        oleMagic[6] === 0x1A &&
+        oleMagic[7] === 0xE1;
+      if (!isOle2) {
+        return { valid: false, error: 'File signature mismatch: File claims to be legacy Office document (.doc/.xls) but binary header is invalid.' };
+      }
+    }
   }
 
   return { valid: true };
