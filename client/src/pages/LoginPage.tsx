@@ -3,11 +3,56 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Loader2, Ship, ShieldCheck, UserCheck } from 'lucide-react';
 
+/**
+ * Validates and sanitizes a return URL to prevent open redirect vulnerabilities.
+ * - Allows only safe internal relative paths beginning with exactly one '/'
+ * - Rejects protocol-relative paths ('//...')
+ * - Rejects absolute URLs (e.g., 'https://...', 'http://...', 'javascript:...')
+ * - Rejects backslash-based paths ('/\\...', '\\...')
+ * - Rejects control characters or malformed values
+ * - Rejects loops back to /login
+ * - Returns '/' as a safe fallback when validation fails
+ */
+export const getSafeReturnTo = (rawReturnTo: string | null | undefined): string => {
+  if (!rawReturnTo || typeof rawReturnTo !== 'string') {
+    return '/';
+  }
+
+  const trimmed = rawReturnTo.trim();
+
+  // Must begin with exactly one '/' and NOT followed by '/' or '\'
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//') || trimmed.startsWith('/\\')) {
+    return '/';
+  }
+
+  // Reject any backslashes anywhere in the path (e.g., '/path\\something' or '\\evil')
+  if (trimmed.includes('\\')) {
+    return '/';
+  }
+
+  // Reject absolute URL schemes anywhere before query/hash (e.g., 'https://', 'javascript:')
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    return '/';
+  }
+
+  // Reject control characters or newlines
+  if (/[\x00-\x1F\x7F]/.test(trimmed)) {
+    return '/';
+  }
+
+  // Prevent redirect loops back to login page
+  if (trimmed === '/login' || trimmed.startsWith('/login?') || trimmed.startsWith('/login/')) {
+    return '/';
+  }
+
+  return trimmed;
+};
+
 export const LoginPage: React.FC = () => {
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get('returnTo') || '/';
+  const returnTo = getSafeReturnTo(searchParams.get('returnTo'));
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,10 +102,10 @@ export const LoginPage: React.FC = () => {
     setError(null);
     setIsLoading(true);
     try {
-      await loginWithGoogle('google.operator@pilship.com', 'PIL Operations Specialist');
+      await loginWithGoogle();
       window.location.href = returnTo;
     } catch (err: any) {
-      setError(err.error || 'Google login failed');
+      setError(err.error || 'Google OAuth is temporarily disabled. Please sign in with your PIL email and password.');
     } finally {
       setIsLoading(false);
     }
@@ -166,6 +211,7 @@ export const LoginPage: React.FC = () => {
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isLoading}
+                  title="Google OAuth is temporarily disabled pending production identity provider integration"
                   className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 cursor-pointer"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">

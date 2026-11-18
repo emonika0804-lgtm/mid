@@ -38,7 +38,7 @@ router.put('/:id/role', authenticate, requireRole(['admin']), async (req: Authen
   }
 
   const now = new Date().toISOString();
-  await db.prepare('UPDATE users SET role = ?, updated_date = ? WHERE id = ?').run(role, now, id);
+  await db.prepare('UPDATE users SET role = ?, token_version = COALESCE(token_version, 1) + 1, updated_date = ? WHERE id = ?').run(role, now, id);
 
   await db.prepare(`
     INSERT INTO audit_logs (id, entity_type, entity_id, entity_number, action, performed_by, performed_by_name, field_changed, old_value, new_value, details, created_date)

@@ -77,10 +77,12 @@ export async function authenticate(req: AuthenticatedRequest, res: Response, nex
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
     
     // Check if token_version is still valid against PostgreSQL user record
-    if (decoded.token_version) {
-      const userRec = (await db.prepare('SELECT token_version FROM users WHERE id = ?').get(decoded.id)) as any;
-      if (userRec && userRec.token_version && userRec.token_version !== decoded.token_version) {
-        return res.status(401).json({ error: 'Session invalidated due to password change. Please log in again.' });
+    const userRec = (await db.prepare('SELECT token_version FROM users WHERE id = ?').get(decoded.id)) as any;
+    if (userRec) {
+      const dbTokenVersion = userRec.token_version || 1;
+      const tokenVersion = decoded.token_version || 1;
+      if (dbTokenVersion !== tokenVersion) {
+        return res.status(401).json({ error: 'Session invalidated due to password change or role update. Please log in again.' });
       }
     }
 
@@ -620,41 +622,24 @@ export async function resetPassword(req: Request, res: Response) {
 }
 
 export async function googleAuth(req: Request, res: Response) {
-  const { email, full_name } = req.body;
-  const targetEmail = (email || 'google.user@pilship.com').trim().toLowerCase();
-  const targetName = full_name || 'PIL Google User';
+  const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || null;
+  const userAgent = req.headers['user-agent'] || null;
+  const requestedEmail = req.body?.email ? String(req.body.email).trim().toLowerCase() : 'unknown';
 
-  let user = (await db.prepare('SELECT * FROM users WHERE email = ?').get(targetEmail)) as any;
-  const now = new Date().toISOString();
-
-  if (!user) {
-    const id = `usr-g-${Date.now()}`;
-    const salt = bcrypt.genSaltSync(10);
-    const password_hash = bcrypt.hashSync('GoogleOAuthDefault123!', salt);
-    await db.prepare(`
-      INSERT INTO users (id, created_date, updated_date, full_name, email, password_hash, role, is_verified, token_version)
-      VALUES (?, ?, ?, ?, ?, ?, 'agency', 1, 1)
-    `).run(id, now, now, targetName, targetEmail, password_hash);
-
-    user = { id, email: targetEmail, full_name: targetName, role: 'agency', token_version: 1 };
-  }
-
-  const token = generateToken({
-    id: user.id,
-    email: user.email,
-    full_name: user.full_name,
-    role: user.role,
-    token_version: user.token_version || 1,
+  await logAuthEvent({
+    event_type: 'LOGIN_FAILED',
+    email: requestedEmail,
+    ip_address: ip,
+    user_agent: userAgent,
+    details: {
+      endpoint: '/api/auth/google',
+      reason: 'Google OAuth is disabled: genuine token verification not configured',
+    },
   });
 
-  return res.json({
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-      full_name: user.full_name,
-      role: user.role,
-    },
+  return res.status(501).json({
+    error: 'Google OAuth authentication is temporarily disabled pending production identity provider integration. Please sign in using your PIL email and password.',
+    code: 'GOOGLE_OAUTH_DISABLED',
   });
 }
 

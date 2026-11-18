@@ -1,29 +1,26 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, MailCheck, ArrowLeft } from 'lucide-react';
+import { Loader2, MailCheck, ArrowLeft, AlertCircle } from 'lucide-react';
 
 export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [resetTokenHint, setResetTokenHint] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
-      const data = await res.json();
+      // Anti-enumeration: always display positive confirmation
       setSubmitted(true);
-      if (data.reset_token_hint) {
-        setResetTokenHint(data.reset_token_hint);
-      }
-    } catch (err) {
-      // Generic success always shown (does not reveal if email exists)
+    } catch (err: any) {
       setSubmitted(true);
     } finally {
       setIsLoading(false);
@@ -48,6 +45,13 @@ export const ForgotPasswordPage: React.FC = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-6 shadow-sm border border-slate-200 rounded-2xl sm:px-10">
+          {error && (
+            <div className="mb-5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
           {submitted ? (
             <div className="text-center space-y-4">
               <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
@@ -55,22 +59,12 @@ export const ForgotPasswordPage: React.FC = () => {
               </div>
               <h3 className="text-sm font-bold text-slate-900">Instructions Dispatched</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                If the email exists in our records, a secure password reset link has been dispatched.
+                If the email address <strong className="text-slate-800">{email}</strong> is registered in our records, a secure password reset link has been dispatched.
               </p>
-              {resetTokenHint && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-left">
-                  <p className="text-[10px] uppercase font-semibold text-blue-800 mb-1">
-                    Direct Test Reset Link:
-                  </p>
-                  <Link
-                    to={`/reset-password?token=${encodeURIComponent(resetTokenHint)}`}
-                    className="text-blue-600 underline break-all font-mono text-[11px]"
-                  >
-                    Click to proceed with token
-                  </Link>
-                </div>
-              )}
-              <div className="pt-2">
+              <p className="text-[11px] text-slate-400">
+                Please check your inbox and spam folders. The link is valid for 1 hour.
+              </p>
+              <div className="pt-3">
                 <Link
                   to="/login"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800"
@@ -82,11 +76,11 @@ export const ForgotPasswordPage: React.FC = () => {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <p className="text-xs text-slate-600">
-                Enter your registered work email and we will send you a reset link.
+                Enter your registered work email address. We will verify your account and dispatch a secure password reset link.
               </p>
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                  Email Address
+                  Work Email Address
                 </label>
                 <input
                   type="email"
@@ -101,7 +95,7 @@ export const ForgotPasswordPage: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !email.trim()}
                   className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-xs text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 cursor-pointer disabled:opacity-50"
                 >
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Reset Link'}

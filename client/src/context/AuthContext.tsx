@@ -14,6 +14,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<any>;
   register: (fullName: string, email: string, password: string, role?: string) => Promise<any>;
   verifyOtp: (email: string, otp: string) => Promise<any>;
+  resendOtp: (email: string) => Promise<any>;
   loginWithGoogle: (email?: string, name?: string) => Promise<any>;
   logout: () => void;
   updateUserRole: (newRole: 'agency' | 'mid' | 'mid_gcc' | 'admin') => void;
@@ -94,6 +95,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data;
   };
 
+  const resendOtp = async (email: string) => {
+    const res = await fetch('/api/auth/resend-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw data;
+    return data;
+  };
+
   const loginWithGoogle = async (email?: string, name?: string) => {
     const res = await fetch('/api/auth/google', {
       method: 'POST',
@@ -133,6 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         verifyOtp,
+        resendOtp,
         loginWithGoogle,
         logout,
         updateUserRole,
