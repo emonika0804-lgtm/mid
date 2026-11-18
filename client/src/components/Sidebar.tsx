@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Ship,
   Bell,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { StatusBadge } from './StatusBadge';
@@ -73,6 +74,22 @@ export const Sidebar: React.FC = () => {
         >
           <Inbox className="w-4 h-4 flex-shrink-0" />
           {!collapsed && <span>Queues</span>}
+        </NavLink>
+
+        {/* Document Repository & Search (All users — RLS protected) */}
+        <NavLink
+          to="/documents"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+              isActive
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-300 hover:bg-white/10 hover:text-white'
+            }`
+          }
+          title={collapsed ? 'Documents' : undefined}
+        >
+          <FileText className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && <span>Documents</span>}
         </NavLink>
 
         {/* Dashboard (MID/MID_GCC/Admin only) */}

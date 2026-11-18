@@ -10,6 +10,7 @@ import { ClaimDetailPage } from './pages/ClaimDetailPage';
 import { SurveyDetailPage } from './pages/SurveyDetailPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { UserManagementPage } from './pages/UserManagementPage';
+import { DocumentSearchPage } from './pages/DocumentSearchPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
@@ -31,6 +32,7 @@ export function App() {
             <Route path="/surveys/new" element={<SurveyDetailPage />} />
             <Route path="/surveys/:id" element={<SurveyDetailPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/documents" element={<DocumentSearchPage />} />
             <Route path="/users" element={<UserManagementPage />} />
           </Route>
 

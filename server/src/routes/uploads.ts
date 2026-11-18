@@ -1,77 +1,74 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { AuthenticatedRequest, authenticate } from '../auth';
-import db from '../db';
+import { saveUploadedFile } from '../attachmentService';
+import { uploadRateLimiter, validateUploadedFile, sanitizeFilename } from '../security';
 
 const router = Router();
 
-const uploadsDir = path.resolve(__dirname, '../../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const basename = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${basename}-${uniqueSuffix}${ext}`);
-  },
-});
-
+// Store files directly in memory buffer for PostgreSQL BYTEA persistence (zero disk dependency)
 const upload = multer({
-  storage,
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB max
+    files: 1,
+  },
 });
 
-router.post('/', authenticate, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/', uploadRateLimiter, authenticate, (req: AuthenticatedRequest, res: Response, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'Upload rejected: File size exceeds the maximum limit of 25MB.' });
+      }
+      return res.status(400).json({ error: `Upload error: ${err.message}` });
+    } else if (err) {
+      return res.status(400).json({ error: `Upload error: ${err.message}` });
+    }
+    next();
+  });
+}, async (req: AuthenticatedRequest, res: Response) => {
   const file = req.file;
   if (!file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
-  const user = req.user!;
-  const now = new Date().toISOString();
-  const fileUrl = `/api/files/${file.filename}`;
-
-  // Track upload in file_uploads staging table
-  try {
-    await db.prepare(`
-      INSERT INTO file_uploads (filename, original_filename, mime_type, file_size, uploaded_by_id, uploaded_by_name, uploaded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (filename) DO UPDATE SET
-        original_filename = EXCLUDED.original_filename,
-        mime_type = EXCLUDED.mime_type,
-        file_size = EXCLUDED.file_size,
-        uploaded_by_id = EXCLUDED.uploaded_by_id,
-        uploaded_by_name = EXCLUDED.uploaded_by_name,
-        uploaded_at = EXCLUDED.uploaded_at
-    `).run(
-      file.filename,
-      file.originalname,
-      file.mimetype,
-      file.size,
-      user.id,
-      user.full_name,
-      now
-    );
-  } catch (err) {
-    console.warn('Note: file_uploads tracking entry error:', err);
+  // 1. File type, extension, and binary header validation
+  const validation = validateUploadedFile(file);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.error });
   }
 
-  return res.json({
-    file_url: fileUrl,
-    file_name: file.originalname,
-    file_size: file.size,
-    file_type: file.mimetype,
-    uploaded_by: user.full_name,
-    uploaded_date: now,
-  });
+  // 2. Filename sanitization
+  const cleanOriginalName = sanitizeFilename(file.originalname);
+
+  const user = req.user!;
+
+  try {
+    const saved = await saveUploadedFile({
+      originalname: cleanOriginalName,
+      mimetype: file.mimetype,
+      buffer: file.buffer,
+      user,
+      claimId: req.body.claim_id,
+      surveyId: req.body.survey_id,
+      mandatoryType: req.body.mandatory_attachment_type || req.body.type,
+    });
+
+    return res.json({
+      file_url: saved.file_url,
+      file_name: saved.file_name,
+      file_size: saved.file_size,
+      file_type: saved.file_type,
+      uploaded_by: saved.uploaded_by,
+      uploaded_date: saved.uploaded_date,
+      attachment_id: saved.id,
+      checksum: saved.checksum,
+    });
+  } catch (err: any) {
+    console.error('File upload error:', err);
+    return res.status(500).json({ error: 'Failed to securely store document in database.' });
+  }
 });
 
 export default router;

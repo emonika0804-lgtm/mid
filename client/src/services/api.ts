@@ -6,6 +6,11 @@ const getHeaders = () => {
   };
 };
 
+// Client-side cache & in-flight deduplication for exchange rates
+let cachedRates: { data: any; timestamp: number } | null = null;
+let inFlightRatesPromise: Promise<any> | null = null;
+const RATES_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache on client
+
 export const api = {
   // LMS Lookup
   async lookupLMS(blNumber: string) {
@@ -18,13 +23,31 @@ export const api = {
   },
 
   // Currency Rates
-  async getRates() {
-    const res = await fetch('/api/rates', {
-      headers: getHeaders(),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to fetch rates');
-    return data;
+  async getRates(forceRefresh = false) {
+    const now = Date.now();
+    if (!forceRefresh && cachedRates && (now - cachedRates.timestamp < RATES_CACHE_TTL_MS)) {
+      return cachedRates.data;
+    }
+
+    if (!forceRefresh && inFlightRatesPromise) {
+      return inFlightRatesPromise;
+    }
+
+    inFlightRatesPromise = (async () => {
+      try {
+        const res = await fetch('/api/rates', {
+          headers: getHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch rates');
+        cachedRates = { data, timestamp: Date.now() };
+        return data;
+      } finally {
+        inFlightRatesPromise = null;
+      }
+    })();
+
+    return inFlightRatesPromise;
   },
 
   // Claims
@@ -146,6 +169,15 @@ export const api = {
     return data;
   },
 
+  async getSurveyAudit(id: string) {
+    const res = await fetch(`/api/surveys/${id}/audit`, {
+      headers: getHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch survey audit log');
+    return data;
+  },
+
   // Dashboard Metrics
   async getDashboardMetrics() {
     const res = await fetch('/api/dashboard/metrics', {
@@ -232,5 +264,59 @@ export const api = {
       headers: getHeaders(),
     });
     return res.json();
+  },
+
+  // Document Search & Management (Phase 4)
+  async searchDocuments(params: {
+    query?: string;
+    bl_number?: string;
+    claim_number?: string;
+    survey_number?: string;
+    cms_number?: string;
+    document_type?: string;
+    filename?: string;
+    uploaded_by?: string;
+    from_date?: string;
+    to_date?: string;
+    page?: number;
+    limit?: number;
+    sort_by?: string;
+    sort_order?: 'ASC' | 'DESC';
+  }) {
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'all') {
+        sp.append(k, String(v));
+      }
+    });
+    const res = await fetch(`/api/attachments/search?${sp.toString()}`, {
+      headers: getHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to search documents');
+    return data;
+  },
+
+  async getDocumentTypes(): Promise<string[]> {
+    const res = await fetch('/api/attachments/types', {
+      headers: getHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch document types');
+    return data;
+  },
+
+  async getDocumentBlob(fileUrl: string): Promise<{ blob: Blob; mimeType: string }> {
+    const filename = fileUrl.split('/').pop() || '';
+    const res = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to fetch document (${res.status})`);
+    }
+    const blob = await res.blob();
+    const mimeType = res.headers.get('content-type') || 'application/octet-stream';
+    return { blob, mimeType };
   },
 };
