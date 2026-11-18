@@ -41,6 +41,7 @@ import {
   MANDATORY_DOCS_DRY_CLAIM,
   MANDATORY_DOCS_REEFER_CLAIM,
 } from '../constants/referenceData';
+import { validateClaimMandatoryAttachments } from '../utils/attachmentValidation';
 
 export const ClaimDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -204,42 +205,38 @@ export const ClaimDetailPage: React.FC = () => {
     }
   };
 
-  // Claim submission validation (Rule 3)
-  const getValidationErrors = () => {
+  // Claim submission validation - validates actual current values without relying on touched/stale state
+  const getValidationErrors = (targetClaim = claim) => {
     const errors: string[] = [];
-    if (!lmsFetched && !claim.shipper) {
-      errors.push('fetch LMS data');
+    if (!targetClaim.bl_number || !targetClaim.bl_number.trim()) {
+      errors.push('BL number is required');
     }
-    if (!claim.claimant || !claim.claimant.trim()) {
-      errors.push('enter claimant');
+    if (!targetClaim.shipper || !targetClaim.shipper.trim()) {
+      errors.push('shipper / LMS data is required');
     }
-    if (
-      !claim.date_of_incident ||
-      !claim.place_of_incident ||
-      !claim.cargo_type ||
-      !claim.nature_of_damage_type ||
-      !claim.incident_description?.trim()
-    ) {
-      errors.push('complete incident info');
+    if (!targetClaim.claimant || !targetClaim.claimant.trim()) {
+      errors.push('claimant is required');
     }
-
-    // Check mandatory documents
-    const docList =
-      claim.cargo_type === 'reefer'
-        ? MANDATORY_DOCS_REEFER_CLAIM
-        : MANDATORY_DOCS_DRY_CLAIM;
-
-    const missingDocs: string[] = [];
-    for (const doc of docList) {
-      const att = (claim.attachments || []).find((a: any) => a.type === doc);
-      const isOk = att?.file_url || att?.comment?.trim();
-      if (!isOk) {
-        missingDocs.push(doc);
-      }
+    if (!targetClaim.date_of_incident || !targetClaim.date_of_incident.trim()) {
+      errors.push('date of incident is required');
+    }
+    if (!targetClaim.place_of_incident || !targetClaim.place_of_incident.trim()) {
+      errors.push('place of incident is required');
+    }
+    if (!targetClaim.cargo_type || !targetClaim.cargo_type.trim()) {
+      errors.push('cargo type is required');
+    }
+    if (!targetClaim.nature_of_damage_type || !targetClaim.nature_of_damage_type.trim()) {
+      errors.push('nature of damage is required');
+    }
+    if (!targetClaim.incident_description || !targetClaim.incident_description.trim()) {
+      errors.push('incident description is required');
     }
 
-    if (missingDocs.length > 0) {
-      errors.push(`missing attachments: ${missingDocs.slice(0, 2).join(', ')}${missingDocs.length > 2 ? ` (+${missingDocs.length - 2} more)` : ''}`);
+    // Check mandatory documents using current attachments and cargo type
+    const validation = validateClaimMandatoryAttachments(targetClaim.attachments || [], targetClaim.cargo_type || 'dry');
+    if (!validation.valid) {
+      errors.push(`missing mandatory attachment(s): ${validation.missing.join(', ')}`);
     }
 
     return errors;
@@ -250,14 +247,15 @@ export const ClaimDetailPage: React.FC = () => {
 
   // Save or Submit
   const handleSaveClaim = async () => {
+    // Validate the actual current value at the exact moment Save is clicked
+    const currentErrors = getValidationErrors(claim);
+    if (currentErrors.length > 0) {
+      alert(`Cannot save claim. Incomplete requirements:\n\n• ${currentErrors.join('\n• ')}`);
+      return;
+    }
     setIsSaving(true);
     try {
       if (isNew) {
-        if (!isValidToSubmit) {
-          alert(`Please complete the required items before submitting: ${validationErrors.join(', ')}`);
-          setIsSaving(false);
-          return;
-        }
         const created = await api.createClaim(claim);
         alert(`Claim ${created.claim_number} submitted successfully!`);
         navigate(`/claims/${created.id}`);
@@ -391,8 +389,9 @@ export const ClaimDetailPage: React.FC = () => {
             <button
               type="button"
               onClick={handleSaveClaim}
-              disabled={isSaving || (isNew && !isValidToSubmit)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+              disabled={isSaving || !isValidToSubmit}
+              title={!isValidToSubmit ? `Cannot save: ${validationErrors.join('; ')}` : undefined}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -513,13 +512,43 @@ export const ClaimDetailPage: React.FC = () => {
           }}
         />
       ) : activeTab === 'attachments' && !isNew ? (
-        <ClaimAttachmentsView
-          claim={claim}
-          onChangeAttachments={(atts) => {
-            setClaim({ ...claim, attachments: atts });
-            api.updateClaim(id!, { attachments: atts });
-          }}
-        />
+        <div className="space-y-6">
+          <ClaimAttachmentsView
+            claim={claim}
+            onChangeAttachments={(atts) => {
+              setClaim((prev: any) => ({ ...prev, attachments: atts }));
+            }}
+          />
+          {/* Submit / Save Button Bar at bottom of Attachments Tab */}
+          <div className="p-4 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+            <div className="text-xs text-slate-500">
+              {!isValidToSubmit ? (
+                <span className="text-rose-700 flex items-center gap-1.5 font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-rose-600" />
+                  <span>
+                    <strong className="font-semibold">Incomplete:</strong> {validationErrors.join(' • ')}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-emerald-600 flex items-center gap-1 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600" />
+                  All mandatory validations met. Ready to save changes.
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveClaim}
+              disabled={isSaving || !isValidToSubmit}
+              title={!isValidToSubmit ? `Cannot save: ${validationErrors.join('; ')}` : undefined}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer w-full sm:w-auto justify-center"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save All Changes
+            </button>
+          </div>
+        </div>
       ) : (
         /* Default: Claim Details Tab with 2/3 and 1/3 columns */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -987,7 +1016,7 @@ export const ClaimDetailPage: React.FC = () => {
                 }
                 attachments={claim.attachments || []}
                 canUpload={true}
-                onChange={(atts) => setClaim({ ...claim, attachments: atts })}
+                onChange={(atts) => setClaim((prev: any) => ({ ...prev, attachments: atts }))}
               />
             </SectionCard>
 
@@ -1013,28 +1042,27 @@ export const ClaimDetailPage: React.FC = () => {
             {/* Submit / Save Button Bar at bottom of Left Column */}
             <div className="p-4 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
               <div className="text-xs text-slate-500">
-                {isNew ? (
-                  !isValidToSubmit ? (
-                    <span className="text-amber-600 flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                      Required: {validationErrors.join(', ')}
+                {!isValidToSubmit ? (
+                  <span className="text-rose-700 flex items-center gap-1.5 font-medium">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-rose-600" />
+                    <span>
+                      <strong className="font-semibold">Incomplete:</strong> {validationErrors.join(' · ')}
                     </span>
-                  ) : (
-                    <span className="text-emerald-600 flex items-center gap-1 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                      All mandatory validations met. Ready to submit claim.
-                    </span>
-                  )
+                  </span>
                 ) : (
-                  <span>Ensure all tally and container updates are reviewed before saving.</span>
+                  <span className="text-emerald-600 flex items-center gap-1 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600" />
+                    All mandatory validations met. Ready to {isNew ? 'submit claim' : 'save changes'}.
+                  </span>
                 )}
               </div>
 
               <button
                 type="button"
                 onClick={handleSaveClaim}
-                disabled={isSaving || (isNew && !isValidToSubmit)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer w-full sm:w-auto justify-center"
+                disabled={isSaving || !isValidToSubmit}
+                title={!isValidToSubmit ? `Cannot save: ${validationErrors.join('; ')}` : undefined}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer w-full sm:w-auto justify-center"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {isNew ? 'Submit Claim' : 'Save All Changes'}
