@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'agency',
   is_verified INTEGER NOT NULL DEFAULT 1,
   otp_code TEXT,
-  reset_token TEXT
+  reset_token TEXT,
+  password_changed_at TIMESTAMPTZ,
+  token_version INTEGER NOT NULL DEFAULT 1
 );
 
 -- 2. CLAIMS
@@ -292,3 +294,15 @@ CREATE INDEX IF NOT EXISTS idx_claims_sla_status ON claims(sla_status);
 CREATE INDEX IF NOT EXISTS idx_surveys_status ON surveys(survey_status);
 CREATE INDEX IF NOT EXISTS idx_surveys_bl_number ON surveys(bl_number);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_id ON audit_logs(entity_id);
+
+-- Phase 4 Document Search Indexes
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_bl_number ON attachment_metadata(bl_number);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_claim_number ON attachment_metadata(claim_number);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_survey_number ON attachment_metadata(survey_number);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_cms_number ON attachment_metadata(cms_reference_number);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_type ON attachment_metadata(mandatory_attachment_type);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_uploaded_by_id ON attachment_metadata(uploaded_by_id);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_uploaded_at ON attachment_metadata(uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_original_filename ON attachment_metadata(original_filename);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_claim_id ON attachment_metadata(claim_id);
+CREATE INDEX IF NOT EXISTS idx_attachment_metadata_survey_id ON attachment_metadata(survey_id);

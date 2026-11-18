@@ -69,31 +69,188 @@ export async function query(text: string, params?: any[]) {
   return res;
 }
 
+export const REQUIRED_ATTACHMENT_INDEXES = [
+  { name: 'idx_attachment_metadata_bl_number', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_bl_number ON attachment_metadata(bl_number)' },
+  { name: 'idx_attachment_metadata_claim_number', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_claim_number ON attachment_metadata(claim_number)' },
+  { name: 'idx_attachment_metadata_survey_number', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_survey_number ON attachment_metadata(survey_number)' },
+  { name: 'idx_attachment_metadata_cms_number', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_cms_number ON attachment_metadata(cms_reference_number)' },
+  { name: 'idx_attachment_metadata_type', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_type ON attachment_metadata(mandatory_attachment_type)' },
+  { name: 'idx_attachment_metadata_uploaded_by_id', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_uploaded_by_id ON attachment_metadata(uploaded_by_id)' },
+  { name: 'idx_attachment_metadata_uploaded_at', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_uploaded_at ON attachment_metadata(uploaded_at DESC)' },
+  { name: 'idx_attachment_metadata_original_filename', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_original_filename ON attachment_metadata(original_filename)' },
+  { name: 'idx_attachment_metadata_claim_id', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_claim_id ON attachment_metadata(claim_id)' },
+  { name: 'idx_attachment_metadata_survey_id', sql: 'CREATE INDEX IF NOT EXISTS idx_attachment_metadata_survey_id ON attachment_metadata(survey_id)' },
+];
+
 /**
- * Initialize PostgreSQL Schema from pg_schema.sql if needed, or verify existing tables
+ * Initialize PostgreSQL Schema from pg_schema.sql if needed, or verify and migrate existing tables.
+ *
+ * Schema DDL execution model & Least-Privilege Architecture:
+ * - Administrative role: DB_USER (e.g. 'postgres') or cloud owner (e.g. 'neondb_owner') is expected
+ *   to execute schema DDL (CREATE TABLE, ALTER TABLE, CREATE INDEX).
+ * - Application runtime role: DB_APP_USER ('pil_app_user') has DML permissions only (SELECT, INSERT, UPDATE, DELETE).
+ * - When required attachment tables and search indexes already exist, initPgDatabase verifies them
+ *   without attempting DDL, allowing least-privilege runtime users to start up safely.
+ * - If required attachment tables or search indexes are missing and cannot be created (e.g. due to
+ *   insufficient privileges or database errors), an explicit error is thrown, preventing the
+ *   application from starting in an incomplete/corrupted state.
+ *
+ * @param targetPool Optional pool to use (defaults to application runtime pool)
  */
-export async function initPgDatabase() {
-  const client = await pool.connect();
+export async function initPgDatabase(targetPool: Pool = pool) {
+  const client = await targetPool.connect();
   try {
     // 1. Verify if key application tables exist
     const checkRes = await client.query(
       "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('claims', 'surveys', 'users')"
     );
     const existingCount = parseInt(checkRes.rows[0].count, 10);
-    if (existingCount >= 3) {
+    if (existingCount < 3) {
+      // Fresh database: execute base schema
+      const schemaPath = path.resolve(__dirname, 'pg_schema.sql');
+      if (fs.existsSync(schemaPath)) {
+        const sql = fs.readFileSync(schemaPath, 'utf-8');
+        await client.query(sql);
+        console.log('[PostgreSQL] Base schema successfully initialized from pg_schema.sql.');
+      }
+    } else {
       console.log('[PostgreSQL] Database tables verified and active.');
-      return;
     }
 
-    // 2. Fallback to schema execution if running with DDL privileges
-    const schemaPath = path.resolve(__dirname, 'pg_schema.sql');
-    if (fs.existsSync(schemaPath)) {
-      const sql = fs.readFileSync(schemaPath, 'utf-8');
-      await client.query(sql);
-      console.log('[PostgreSQL] Schema successfully initialized / verified.');
+    // 2. Safe, idempotent incremental schema migrations (executed for both fresh and existing databases)
+    // Ensure the users table exists before attempting ALTER TABLE
+    const usersTableCheck = await client.query(
+      "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'"
+    );
+    if (usersTableCheck.rows.length > 0) {
+      const usersCols = await client.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'users' AND column_name IN ('token_version', 'password_changed_at')
+      `);
+      const existingColNames = usersCols.rows.map((r: any) => r.column_name);
+      if (!existingColNames.includes('token_version') || !existingColNames.includes('password_changed_at')) {
+        try {
+          await client.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 1;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ;
+          `);
+        } catch (alterErr: any) {
+          console.error('[PostgreSQL] Users table ALTER TABLE migration note:', alterErr?.message || alterErr);
+        }
+      }
+      console.log('[PostgreSQL] Users table schema migrations verified (token_version, password_changed_at).');
     }
+
+    // 3. Attachment table migration & schema verification (Phase 3 / Phase 4 Document Management)
+    // First, check which tables exist
+    const checkTablesRes = await client.query(`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name IN ('attachment_metadata', 'attachment_contents')
+    `);
+    const existingTableNames = new Set(checkTablesRes.rows.map((r: any) => r.table_name));
+    const hasMetadata = existingTableNames.has('attachment_metadata');
+    const hasContents = existingTableNames.has('attachment_contents');
+
+    // Second, check which search indexes exist
+    let existingIndexNames = new Set<string>();
+    if (hasMetadata) {
+      const checkIndexesRes = await client.query(`
+        SELECT indexname FROM pg_indexes
+        WHERE schemaname = 'public' AND tablename = 'attachment_metadata'
+      `);
+      existingIndexNames = new Set(checkIndexesRes.rows.map((r: any) => r.indexname));
+    }
+
+    const missingIndexes = REQUIRED_ATTACHMENT_INDEXES.filter((idx) => !existingIndexNames.has(idx.name));
+
+    // If tables or indexes are missing, attempt to create them (requires DDL privileges)
+    if (!hasMetadata || !hasContents || missingIndexes.length > 0) {
+      try {
+        if (!hasMetadata) {
+          await client.query(`
+            CREATE TABLE IF NOT EXISTS attachment_metadata (
+              id TEXT PRIMARY KEY,
+              claim_id TEXT,
+              survey_id TEXT,
+              bl_number TEXT,
+              cms_reference_number TEXT,
+              claim_number TEXT,
+              survey_number TEXT,
+              mandatory_attachment_type TEXT,
+              original_filename TEXT NOT NULL,
+              stored_filename TEXT,
+              mime_type TEXT NOT NULL,
+              file_size INTEGER NOT NULL,
+              uploaded_by_id TEXT,
+              uploaded_by_name TEXT,
+              uploaded_at TEXT NOT NULL,
+              comments TEXT,
+              document_status TEXT DEFAULT 'uploaded',
+              checksum TEXT,
+              created_date TEXT NOT NULL
+            )
+          `);
+        }
+
+        if (!hasContents) {
+          await client.query(`
+            CREATE TABLE IF NOT EXISTS attachment_contents (
+              attachment_id TEXT PRIMARY KEY REFERENCES attachment_metadata(id) ON DELETE CASCADE,
+              file_data BYTEA NOT NULL
+            )
+          `);
+        }
+
+        for (const idx of missingIndexes) {
+          await client.query(idx.sql);
+        }
+      } catch (ddlErr: any) {
+        // DDL execution failed (e.g. 42501 insufficient_privilege for pil_app_user)
+        console.error('[PostgreSQL] Attachment schema DDL execution failed:', ddlErr?.message || ddlErr);
+      }
+    }
+
+    // Post-initialization schema completeness verification
+    const finalTableCheck = await client.query(`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name IN ('attachment_metadata', 'attachment_contents')
+    `);
+    const verifiedTables = new Set(finalTableCheck.rows.map((r: any) => r.table_name));
+    const missingTables: string[] = [];
+    if (!verifiedTables.has('attachment_metadata')) missingTables.push('attachment_metadata');
+    if (!verifiedTables.has('attachment_contents')) missingTables.push('attachment_contents');
+
+    if (missingTables.length > 0) {
+      const err: any = new Error(
+        `[PostgreSQL] Database initialization failed: required attachment tables missing: ${missingTables.join(', ')}. ` +
+        `Application cannot start with incomplete attachment schema. ` +
+        `Schema DDL must be executed by an administrative user (DB_USER/postgres).`
+      );
+      err.code = 'ATTACHMENT_SCHEMA_MISSING_TABLES';
+      throw err;
+    }
+
+    const finalIndexCheck = await client.query(`
+      SELECT indexname FROM pg_indexes
+      WHERE schemaname = 'public' AND tablename = 'attachment_metadata'
+    `);
+    const verifiedIndexes = new Set(finalIndexCheck.rows.map((r: any) => r.indexname));
+    const stillMissingIndexes = REQUIRED_ATTACHMENT_INDEXES.filter((idx) => !verifiedIndexes.has(idx.name));
+
+    if (stillMissingIndexes.length > 0) {
+      const err: any = new Error(
+        `[PostgreSQL] Database initialization failed: required attachment search indexes missing: ${stillMissingIndexes.map((i) => i.name).join(', ')}. ` +
+        `Application cannot start with incomplete attachment search indexes. ` +
+        `Schema DDL must be executed by an administrative user (DB_USER/postgres).`
+      );
+      err.code = 'ATTACHMENT_SCHEMA_MISSING_INDEXES';
+      throw err;
+    }
+
+    console.log('[PostgreSQL] Attachment tables and indexes verified (attachment_metadata, attachment_contents).');
   } catch (err: any) {
-    console.warn('[PostgreSQL] Database initialization note:', err?.message || err);
+    console.error('[PostgreSQL] Database initialization failed:', err?.message || err);
+    throw err;
   } finally {
     client.release();
   }

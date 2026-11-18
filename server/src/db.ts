@@ -59,9 +59,20 @@ export const db = {
   },
 };
 
+let isInitialized = false;
+
 export async function initDatabase() {
   await initPgDatabase();
+  isInitialized = true;
   console.log('[Database] PostgreSQL backend database initialized.');
+}
+
+export function isDatabaseReady(): boolean {
+  return isInitialized;
+}
+
+export function setDatabaseReady(ready: boolean): void {
+  isInitialized = ready;
 }
 
 export { pool, query };

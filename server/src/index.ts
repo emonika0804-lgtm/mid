@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
-import { initDatabase } from './db';
+import { initDatabase, isDatabaseReady } from './db';
 import { loadLMSExcel, fetchLMSByBL } from './lms';
 import { getDailyExchangeRates } from './rates';
 import {
@@ -38,7 +38,7 @@ import uploadsRouter from './routes/uploads';
 import filesRouter from './routes/files';
 import attachmentsRouter from './routes/attachments';
 import db from './db';
-import { testConnection } from './pgdb';
+import { testConnection, pool } from './pgdb';
 import swaggerUi from 'swagger-ui-express';
 import { openapiSpecification, writeOpenApiFile } from './swagger';
 
@@ -77,15 +77,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/api/files', filesRouter);
 app.use('/uploads', filesRouter);
 
-// Initialize DB and preload LMS Excel
-initDatabase().catch((e) => {
-  console.error('[Database] PostgreSQL initialization error:', e);
-});
-try {
-  loadLMSExcel();
-} catch (e) {
-  console.warn('LMS Excel initial preload note:', e);
-}
+
 
 // Auth routes with dedicated rate limiting
 app.post('/api/auth/login', authRateLimiter, login);
@@ -160,13 +152,15 @@ app.get('/docs', (_req, res) => {
 });
 
 // ─── Health Check Endpoints (unauthenticated, lightweight) ───
-// Readiness: is the application ready to serve traffic?
+// Readiness: is the application ready to serve traffic? (Requires database initialization)
 app.get('/api/health/ready', async (_req, res) => {
-  const dbCheck = await testConnection();
-  const ready = dbCheck.ok;
+  const initialized = isDatabaseReady();
+  const dbCheck = initialized ? await testConnection() : { ok: false };
+  const ready = initialized && dbCheck.ok;
   return res.status(ready ? 200 : 503).json({
     status: ready ? 'ready' : 'not_ready',
-    database: ready ? 'connected' : 'disconnected',
+    database: dbCheck.ok ? 'connected' : 'disconnected',
+    initialized,
     timestamp: new Date().toISOString(),
   });
 });
@@ -174,6 +168,7 @@ app.get('/api/health/ready', async (_req, res) => {
 // Combined health endpoint
 app.get('/api/health', async (_req, res) => {
   const uptimeSeconds = Math.round((Date.now() - SERVER_START_TIME) / 1000);
+  const initialized = isDatabaseReady();
   const dbCheck = await testConnection();
   let version = '1.0.0';
   try {
@@ -182,10 +177,11 @@ app.get('/api/health', async (_req, res) => {
     version = pkgJson.version || version;
   } catch { /* ignore */ }
   return res.json({
-    status: dbCheck.ok ? 'healthy' : 'degraded',
+    status: (initialized && dbCheck.ok) ? 'healthy' : 'degraded',
     version,
     uptime: uptimeSeconds,
     database: dbCheck.ok ? 'connected' : 'disconnected',
+    initialized,
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
   });
@@ -203,6 +199,56 @@ if (fs.existsSync(clientDist)) {
 // 6. Centralized Error Handling Middleware (Sanitizes errors, prevents stack leaks)
 app.use(errorHandler);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`PIL Cargo Claim & Survey Platform server running on port ${PORT} (0.0.0.0)`);
-});
+/**
+ * Asynchronous server bootstrap lifecycle:
+ * 1. Awaits database initialization and schema verification before opening port.
+ * 2. If initialization fails:
+ *    - Does NOT open HTTP listening port.
+ *    - Logs fatal error.
+ *    - Closes connection pool gracefully (in production/standalone mode).
+ *    - Exits process with non-zero exit code (in production/standalone mode).
+ * 3. Preloads LMS Excel data.
+ * 4. Binds Express HTTP listener only after database is completely ready.
+ */
+export async function startServer(port: number = PORT, initFn: () => Promise<void> = initDatabase): Promise<any> {
+  try {
+    // 1. Await database initialization and schema verification before opening port
+    await initFn();
+
+    // 2. Preload LMS Excel mock data
+    try {
+      loadLMSExcel();
+    } catch (e) {
+      console.warn('LMS Excel initial preload note:', e);
+    }
+
+    // 3. Open HTTP listening port only after successful database initialization
+    return await new Promise((resolve) => {
+      const serverInstance = app.listen(port, '0.0.0.0', () => {
+        console.log(`PIL Cargo Claim & Survey Platform server running on port ${port} (0.0.0.0)`);
+        resolve(serverInstance);
+      });
+    });
+  } catch (err: any) {
+    console.error('[Database] Fatal PostgreSQL initialization error:', err?.message || err);
+    if (process.env.NODE_ENV !== 'test') {
+      try {
+        await pool.end();
+      } catch (poolErr) {
+        console.error('[Database] Error closing PostgreSQL pool during shutdown:', poolErr);
+      }
+      process.exit(1);
+    }
+    throw err;
+  }
+}
+
+// Automatically start server unless running under test runner
+if (process.env.NODE_ENV !== 'test') {
+  startServer().catch(() => {
+    // Fatal error handled and logged inside startServer
+  });
+}
+
+export { app };
+export default app;
