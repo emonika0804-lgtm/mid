@@ -30,6 +30,7 @@ import {
   MANDATORY_DOCS_REEFER_SURVEY,
   SURVEY_STATUS_ORDER,
 } from '../constants/referenceData';
+import { validateSurveyMandatoryAttachments } from '../utils/attachmentValidation';
 
 export const SurveyDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -107,6 +108,9 @@ export const SurveyDetailPage: React.FC = () => {
           setWorkflowStatus(data.survey_status || 'new_survey');
           setAvailableContainers(data.containers_with_sizes || []);
           setLmsFetched(true);
+          api.getSurveyAudit(id)
+            .then((logs) => setAuditLogs(logs))
+            .catch((err) => console.warn('Survey audit fetch notice:', err));
         })
         .catch((err) => {
           alert(`Error loading survey: ${err.message || err}`);
@@ -202,34 +206,39 @@ export const SurveyDetailPage: React.FC = () => {
     }
   };
 
-  // Validation (Rule 4)
-  const getValidationErrors = () => {
+  // Survey validation - validates actual current values without relying on touched/stale state
+  const getValidationErrors = (targetSurvey = survey) => {
     const errors: string[] = [];
-    if (!lmsFetched && !survey.shipper) errors.push('fetch LMS data');
-    if (!survey.survey_reference_number?.trim()) errors.push('survey reference number');
-    if (isMid && !survey.cms_reference_number?.trim()) errors.push('CMS reference number');
-    if (!survey.survey_requested_by?.trim()) errors.push('requesting party');
-    if (!survey.date_of_survey) errors.push('date of survey');
-    if (survey.survey_cost === '' || survey.survey_cost === null || isNaN(Number(survey.survey_cost))) {
-      errors.push('survey cost');
+    if (!targetSurvey.bl_number || !targetSurvey.bl_number.trim()) {
+      errors.push('BL number is required');
+    }
+    if (!targetSurvey.shipper || !targetSurvey.shipper.trim()) {
+      errors.push('shipper / LMS data is required');
+    }
+    if (!targetSurvey.survey_reference_number || !targetSurvey.survey_reference_number.trim()) {
+      errors.push('survey reference number is required');
+    }
+    if (isMid && (!targetSurvey.cms_reference_number || !targetSurvey.cms_reference_number.trim())) {
+      errors.push('CMS reference number is required for MID');
+    }
+    if (!targetSurvey.survey_requested_by || !targetSurvey.survey_requested_by.trim()) {
+      errors.push('requesting party is required');
+    }
+    if (!targetSurvey.date_of_survey || !targetSurvey.date_of_survey.trim()) {
+      errors.push('date of survey is required');
+    }
+    if (
+      targetSurvey.survey_cost === '' ||
+      targetSurvey.survey_cost === null ||
+      targetSurvey.survey_cost === undefined ||
+      isNaN(Number(targetSurvey.survey_cost))
+    ) {
+      errors.push('valid survey cost is required');
     }
 
-    const docList =
-      survey.cargo_type === 'reefer'
-        ? MANDATORY_DOCS_REEFER_SURVEY
-        : MANDATORY_DOCS_DRY_SURVEY;
-
-    const missingDocs: string[] = [];
-    for (const doc of docList) {
-      const att = (survey.attachments || []).find((a: any) => a.type === doc);
-      const isOk = att?.file_url || att?.comment?.trim();
-      if (!isOk) {
-        missingDocs.push(doc);
-      }
-    }
-
-    if (missingDocs.length > 0) {
-      errors.push(`missing documents (${missingDocs.length})`);
+    const validation = validateSurveyMandatoryAttachments(targetSurvey.attachments || [], targetSurvey.cargo_type || 'dry');
+    if (!validation.valid) {
+      errors.push(`missing mandatory attachment(s): ${validation.missing.join(', ')}`);
     }
 
     return errors;
@@ -240,20 +249,22 @@ export const SurveyDetailPage: React.FC = () => {
 
   // Submit / Save
   const handleSaveSurvey = async () => {
+    // Validate the actual current value at the exact moment Save is clicked
+    const currentErrors = getValidationErrors(survey);
+    if (currentErrors.length > 0) {
+      alert(`Cannot save survey. Incomplete requirements:\n\n• ${currentErrors.join('\n• ')}`);
+      return;
+    }
     setIsSaving(true);
     try {
       if (isNew) {
-        if (!isValidToSubmit) {
-          alert(`Please complete the required items before submitting: ${validationErrors.join(', ')}`);
-          setIsSaving(false);
-          return;
-        }
         const created = await api.createSurvey(survey);
         alert(`Survey ${created.survey_number} created successfully!`);
         navigate(`/surveys/${created.id}`);
       } else {
         const updated = await api.updateSurvey(id!, survey);
         setSurvey(updated);
+        api.getSurveyAudit(id!).then((logs) => setAuditLogs(logs)).catch(() => {});
         alert('Survey updates saved successfully!');
       }
     } catch (err: any) {
@@ -289,6 +300,7 @@ export const SurveyDetailPage: React.FC = () => {
         survey_status: workflowStatus,
       });
       setSurvey(updated);
+      api.getSurveyAudit(id!).then((logs) => setAuditLogs(logs)).catch(() => {});
       alert('Survey status updated successfully!');
     } catch (err: any) {
       alert(`Failed to update status: ${err.message || err}`);
@@ -360,8 +372,9 @@ export const SurveyDetailPage: React.FC = () => {
             <button
               type="button"
               onClick={handleSaveSurvey}
-              disabled={isSaving || (isNew && !isValidToSubmit)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+              disabled={isSaving || !isValidToSubmit}
+              title={!isValidToSubmit ? `Cannot save: ${validationErrors.join('; ')}` : undefined}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -761,35 +774,34 @@ export const SurveyDetailPage: React.FC = () => {
               }
               attachments={survey.attachments || []}
               canUpload={true}
-              onChange={(atts) => setSurvey({ ...survey, attachments: atts })}
+              onChange={(atts) => setSurvey((prev: any) => ({ ...prev, attachments: atts }))}
             />
           </SectionCard>
 
           {/* Submit Button Bar */}
           <div className="p-4 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
             <div className="text-xs text-slate-500">
-              {isNew ? (
-                !isValidToSubmit ? (
-                  <span className="text-amber-600 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                    Required: {validationErrors.join(', ')}
+              {!isValidToSubmit ? (
+                <span className="text-rose-700 flex items-center gap-1.5 font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-rose-600" />
+                  <span>
+                    <strong className="font-semibold">Incomplete:</strong> {validationErrors.join(' • ')}
                   </span>
-                ) : (
-                  <span className="text-emerald-600 flex items-center gap-1 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                    All mandatory validations met. Ready to submit survey request.
-                  </span>
-                )
+                </span>
               ) : (
-                <span>Ensure all survey tallies and documents are saved.</span>
+                <span className="text-emerald-600 flex items-center gap-1 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600" />
+                  All mandatory validations met. Ready to {isNew ? 'submit survey request' : 'save changes'}.
+                </span>
               )}
             </div>
 
             <button
               type="button"
               onClick={handleSaveSurvey}
-              disabled={isSaving || (isNew && !isValidToSubmit)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors cursor-pointer w-full sm:w-auto justify-center"
+              disabled={isSaving || !isValidToSubmit}
+              title={!isValidToSubmit ? `Cannot save: ${validationErrors.join('; ')}` : undefined}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer w-full sm:w-auto justify-center"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {isNew ? 'Submit Survey Request' : 'Save Changes'}
