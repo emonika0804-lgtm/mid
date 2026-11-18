@@ -38,8 +38,6 @@ export const EXPENSE_TYPES = [
   'Professional Fees',
   'Container Repair Cost',
   'Sickness Allowance',
-  'Settlement Amount',
-  'Settlement Payout',
   'Stowaway Repatriation Cost',
   'Survey Fees',
   'Transportation',

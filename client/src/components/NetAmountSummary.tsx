@@ -47,7 +47,7 @@ export const NetAmountSummary: React.FC<NetAmountSummaryProps> = ({
         </div>
       </div>
 
-      {/* Net Amount */}
+      {/* Net Tally Balance */}
       <div
         className={`border rounded-xl p-4 flex items-center justify-between ${
           isNetPositive
@@ -61,13 +61,13 @@ export const NetAmountSummary: React.FC<NetAmountSummaryProps> = ({
               isNetPositive ? 'text-blue-600' : 'text-rose-600'
             }`}
           >
-            Net Amount
+            Net Tally Balance
           </span>
           <span className={`text-xl font-bold ${isNetPositive ? 'text-blue-700' : 'text-rose-700'}`}>
             ${Math.abs(netAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <span className="text-[10px] opacity-75 block mt-0.5">
-            {netAmount < 0 ? 'Net Recovery Excess (USD)' : 'Net PIL Exposure (USD)'}
+            {netAmount < 0 ? 'Net Recovery Excess (USD)' : 'Net Tally Balance (USD)'}
           </span>
         </div>
         <div

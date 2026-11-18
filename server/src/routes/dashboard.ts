@@ -88,23 +88,45 @@ router.get('/metrics', authenticate, requireRole(['mid', 'mid_gcc', 'admin']), a
     }
   }
 
-  // 3. Standalone + Embedded Expenses
-  const standaloneExpenses = (await db.prepare('SELECT * FROM expenses').all()) as any[];
-  const mergedExpenses: any[] = [...standaloneExpenses];
+  // 3. Claim-Embedded Expenses (FIN-03: Embedded tallies are single source of truth for active application)
+  const mergedExpenses: any[] = [];
 
   for (const c of claims) {
     const tally = parseJSONSafely(c.expense_tally_records, []);
     for (const exp of tally) {
+      const totalAmt = Number(exp.amount_usd) || Number(exp.amount) || 0;
+      const rawStatus = (exp.status || '').toLowerCase().trim();
+      let settlementAmt = 0;
+
+      if (exp.settlement_amount !== undefined && exp.settlement_amount !== null && !isNaN(Number(exp.settlement_amount))) {
+        settlementAmt = Number(exp.settlement_amount);
+      } else if (rawStatus === 'settled' || rawStatus === 'completed') {
+        settlementAmt = totalAmt;
+      } else {
+        settlementAmt = 0;
+      }
+
+      let effectiveStatus = rawStatus;
+      if (!effectiveStatus) {
+        if (settlementAmt >= totalAmt && totalAmt > 0) {
+          effectiveStatus = 'settled';
+        } else if (settlementAmt > 0) {
+          effectiveStatus = 'partial';
+        } else {
+          effectiveStatus = 'pending';
+        }
+      }
+
       mergedExpenses.push({
         id: exp.id || `clm-exp-${c.id}-${Math.random()}`,
         claim_id: c.id,
         claim_number: c.claim_number,
         bl_number: c.bl_number,
         expense_type: exp.expense_type,
-        amount: exp.amount_usd || exp.amount || 0,
-        currency: 'USD',
-        status: 'settled',
-        settlement_amount: exp.amount_usd || exp.amount || 0,
+        amount: totalAmt,
+        currency: exp.currency || 'USD',
+        status: effectiveStatus,
+        settlement_amount: settlementAmt,
         description: exp.description,
         created_date: exp.date || c.created_date,
       });
@@ -127,25 +149,54 @@ router.get('/metrics', authenticate, requireRole(['mid', 'mid_gcc', 'admin']), a
 
   const outstandingExpensesUsd = Math.max(0, totalExpensesUsd - settledExpensesUsd);
 
-  // 4. Standalone + Embedded Recoveries
-  const standaloneRecoveries = (await db.prepare('SELECT * FROM recoveries').all()) as any[];
-  const mergedRecoveries: any[] = [...standaloneRecoveries];
+  // 4. Claim-Embedded Recoveries (FIN-03: Embedded tallies are single source of truth for active application)
+  const mergedRecoveries: any[] = [];
 
   for (const c of claims) {
     const tally = parseJSONSafely(c.recovery_tally_records, []);
     for (const rec of tally) {
+      const totalRecAmt = Number(rec.recovery_amount) || Number(rec.amount_usd) || Number(rec.amount) || 0;
+      const rawStatus = (rec.recovery_status || rec.status || '').toLowerCase().trim();
+      let recoveredAmt = 0;
+
+      if (rec.recovered_amount !== undefined && rec.recovered_amount !== null && !isNaN(Number(rec.recovered_amount))) {
+        recoveredAmt = Number(rec.recovered_amount);
+      } else if (rawStatus === 'recovered' || rawStatus === 'completed' || rawStatus === 'settled') {
+        recoveredAmt = totalRecAmt;
+      } else {
+        recoveredAmt = 0;
+      }
+
+      let outstandingRec = 0;
+      if (rec.outstanding_recovery !== undefined && rec.outstanding_recovery !== null && !isNaN(Number(rec.outstanding_recovery))) {
+        outstandingRec = Number(rec.outstanding_recovery);
+      } else {
+        outstandingRec = Math.max(0, totalRecAmt - recoveredAmt);
+      }
+
+      let effectiveStatus = rawStatus;
+      if (!effectiveStatus) {
+        if (recoveredAmt >= totalRecAmt && totalRecAmt > 0) {
+          effectiveStatus = 'recovered';
+        } else if (recoveredAmt > 0) {
+          effectiveStatus = 'partial';
+        } else {
+          effectiveStatus = 'pending';
+        }
+      }
+
       mergedRecoveries.push({
         id: rec.id || `clm-rec-${c.id}-${Math.random()}`,
         claim_id: c.id,
         claim_number: c.claim_number,
         bl_number: c.bl_number,
-        recovery_status: 'recovered',
-        recovery_amount: rec.amount_usd || rec.amount || 0,
-        recovered_amount: rec.amount_usd || rec.amount || 0,
-        outstanding_recovery: 0,
-        recovery_source: rec.recovery_type,
+        recovery_status: effectiveStatus,
+        recovery_amount: totalRecAmt,
+        recovered_amount: recoveredAmt,
+        outstanding_recovery: outstandingRec,
+        recovery_source: rec.recovery_type || rec.recovery_source,
         liable_party: rec.liable_party || 'Carrier (PIL)',
-        remarks: rec.description,
+        remarks: rec.remarks || rec.description,
         date: rec.date || c.created_date,
         created_date: rec.date || c.created_date,
       });
@@ -222,9 +273,9 @@ router.get('/metrics', authenticate, requireRole(['mid', 'mid_gcc', 'admin']), a
       })),
     },
     expenses: {
-      total: totalExpensesUsd,
-      settled: settledExpensesUsd,
-      outstanding: outstandingExpensesUsd,
+      total: Math.round(totalExpensesUsd * 100) / 100,
+      settled: Math.round(settledExpensesUsd * 100) / 100,
+      outstanding: Math.round(outstandingExpensesUsd * 100) / 100,
       count: mergedExpenses.length,
       chart_data: Object.entries(expensesByTypeMap).map(([type, amount]) => ({
         type,
@@ -233,9 +284,9 @@ router.get('/metrics', authenticate, requireRole(['mid', 'mid_gcc', 'admin']), a
       list: mergedExpenses,
     },
     recoveries: {
-      total: totalRecoveryUsd,
-      recovered: recoveredUsd,
-      outstanding: outstandingRecoveryUsd,
+      total: Math.round(totalRecoveryUsd * 100) / 100,
+      recovered: Math.round(recoveredUsd * 100) / 100,
+      outstanding: Math.round(outstandingRecoveryUsd * 100) / 100,
       count: mergedRecoveries.length,
       chart_data: Object.entries(recoveryByLiableMap).map(([party, amount]) => ({
         party,
