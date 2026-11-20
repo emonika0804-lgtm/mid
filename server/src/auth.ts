@@ -17,7 +17,19 @@ function getJwtSecret(): string {
 }
 
 export const JWT_SECRET = getJwtSecret();
-const OTP_SALT = process.env.OTP_SALT || 'pil-cargo-claims-otp-salt-2026';
+
+export function getOtpSalt(customEnv?: { OTP_SALT?: string; NODE_ENV?: string }): string {
+  const salt = customEnv !== undefined ? customEnv.OTP_SALT : process.env.OTP_SALT;
+  const nodeEnv = customEnv !== undefined ? customEnv.NODE_ENV : process.env.NODE_ENV;
+  const isInvalid = !salt || salt.trim() === '' || salt === 'pil-cargo-claims-otp-salt-2026';
+
+  if (isInvalid && nodeEnv === 'production') {
+    throw new Error('[SECURITY FATAL] A strong, dedicated OTP_SALT must be configured in environment variables for production.');
+  }
+  return salt && salt.trim() !== '' ? salt : 'pil-cargo-claims-otp-salt-2026';
+}
+
+export const OTP_SALT = getOtpSalt();
 
 export interface AuthUser {
   id: string;
@@ -33,7 +45,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export function hashOtp(otp: string): string {
-  return crypto.createHash('sha256').update(otp + OTP_SALT).digest('hex');
+  return crypto.createHash('sha256').update(otp + getOtpSalt()).digest('hex');
 }
 
 export function hashToken(token: string): string {

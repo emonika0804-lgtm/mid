@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, RefreshCw, FileText, ClipboardList } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, FileText, ClipboardList, Download } from 'lucide-react';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/StatusBadge';
 import { WORKFLOW_STATUS_ORDER, SURVEY_STATUS_ORDER } from '../constants/referenceData';
 import { useAuth } from '../context/AuthContext';
+import { exportToCsv } from '../utils/csvExport';
 
 export const LandingPage: React.FC = () => {
   const { user } = useAuth();
@@ -43,6 +44,60 @@ export const LandingPage: React.FC = () => {
     loadData();
   };
 
+  const handleExportCsv = () => {
+    const today = new Date().toISOString().split('T')[0];
+    if (activeTab === 'claims') {
+      exportToCsv(
+        `pil_claims_export_${today}`,
+        [
+          { header: 'Claim Number', accessor: (c) => c.claim_number },
+          { header: 'CMS Number', accessor: (c) => c.cms_number || '' },
+          { header: 'BL Number', accessor: (c) => c.bl_number },
+          { header: 'Claimant', accessor: (c) => c.claimant || '' },
+          {
+            header: 'Amount USD',
+            accessor: (c) =>
+              c.claim_amount !== null && c.claim_amount !== undefined ? c.claim_amount : '',
+          },
+          { header: 'Status', accessor: (c) => c.status },
+          { header: 'Handler', accessor: (c) => c.claims_handler || 'Unassigned' },
+          { header: 'Discharge Date', accessor: (c) => c.discharge_date || '' },
+          {
+            header: 'Created Date',
+            accessor: (c) => (c.created_date ? new Date(c.created_date).toLocaleDateString() : ''),
+          },
+          {
+            header: 'Time Bar Date',
+            accessor: (c) => (c.time_bar_date ? new Date(c.time_bar_date).toLocaleDateString() : ''),
+          },
+          { header: 'Survey Status', accessor: (c) => c.survey_status || 'none' },
+        ],
+        claims
+      );
+    } else {
+      exportToCsv(
+        `pil_surveys_export_${today}`,
+        [
+          { header: 'Survey Number', accessor: (s) => s.survey_number },
+          { header: 'BL Number', accessor: (s) => s.bl_number },
+          { header: 'Survey Reference', accessor: (s) => s.survey_reference_number || '' },
+          { header: 'Requested By', accessor: (s) => s.survey_requested_by || '' },
+          { header: 'Status', accessor: (s) => s.survey_status },
+          {
+            header: 'Survey Cost',
+            accessor: (s) =>
+              s.survey_cost !== null && s.survey_cost !== undefined ? s.survey_cost : '',
+          },
+          {
+            header: 'Created Date',
+            accessor: (s) => (s.created_date ? new Date(s.created_date).toLocaleDateString() : ''),
+          },
+        ],
+        surveys
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -54,7 +109,18 @@ export const LandingPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={activeTab === 'claims' ? claims.length === 0 : surveys.length === 0}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            title={`Export ${activeTab} to CSV`}
+          >
+            <Download className="w-4 h-4 text-slate-500" />
+            Export CSV
+          </button>
+
           {activeTab === 'claims' ? (
             <button
               type="button"

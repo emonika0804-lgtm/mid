@@ -657,5 +657,49 @@ export async function runSurveysSuite(): Promise<TestItem[]> {
     `500 Triggered: ${injectedConvertFailed}, Orphan claims: ${orphanClaims.length}, Survey untouched: ${Boolean(surveyUnchanged)}, Audits: ${surveyConvertAudit.length + claimCreatedAudit.length}, Connection reused: ${connectionReused}, Recovery: ${conversionRecovered}`
   );
 
+  // 23. Agency role blocked from deleting survey (403 Forbidden)
+  const delTestSurveyRes = await requestApi('POST', '/api/surveys', {
+    bl_number: 'PIL0100099',
+    survey_reference_number: 'SRV-DEL-TEST',
+    survey_requested_by: 'Delete Test',
+    date_of_survey: '2026-07-21',
+    survey_cost: 1500.00,
+    cargo_type: 'dry',
+    attachments: MANDATORY_DOCS_DRY_SURVEY.map((doc) => ({
+      type: doc,
+      comment: 'Documentation note',
+    })),
+  }, agencyToken);
+  const delSurveyId = delTestSurveyRes.body.id;
+
+  const agencyDeleteRes = await requestApi('DELETE', `/api/surveys/${delSurveyId}`, null, agencyToken);
+  record(
+    'SVY-3.23',
+    'Agency role blocked from deleting survey record (403 Forbidden)',
+    agencyDeleteRes.status === 403,
+    `Status: ${agencyDeleteRes.status}`
+  );
+
+  // 24. MID role successfully deletes survey (200 OK) with audit trail
+  const midDeleteRes = await requestApi('DELETE', `/api/surveys/${delSurveyId}`, null, midToken);
+  const surveyCheck = await db.prepare('SELECT id FROM surveys WHERE id = ?').get(delSurveyId);
+  const deleteAudit = (await db.prepare('SELECT action, entity_type FROM audit_logs WHERE entity_id = ? AND action = ?').get(delSurveyId, 'DELETE')) as any;
+
+  record(
+    'SVY-3.24',
+    'MID/Admin successfully deletes survey with audit log record (200 OK)',
+    midDeleteRes.status === 200 && !surveyCheck && Boolean(deleteAudit),
+    `Status: ${midDeleteRes.status}, Deleted: ${!surveyCheck}, Audit: ${Boolean(deleteAudit)}`
+  );
+
+  // 25. Survey creation generates notification in notifications table
+  const surveyNotif = (await db.prepare("SELECT * FROM notifications WHERE message LIKE ? ORDER BY created_date DESC LIMIT 1").get('%survey%')) as any;
+  record(
+    'SVY-3.25',
+    'Survey creation automatically generates notification in notifications table',
+    Boolean(surveyNotif),
+    `Found notification: ${surveyNotif?.message || 'none'}`
+  );
+
   return tests;
 }

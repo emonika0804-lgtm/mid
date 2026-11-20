@@ -128,6 +128,12 @@ export function buildTestApp() {
     return res.json(rows);
   });
 
+  app.put('/api/notifications/read-all', authenticate, async (req: any, res) => {
+    const user = req.user;
+    await db.prepare('UPDATE notifications SET read = 1 WHERE user_id = ? OR user_id IS NULL').run(user.id);
+    return res.json({ success: true });
+  });
+
   app.put('/api/notifications/:id/read', authenticate, async (req, res) => {
     await db.prepare('UPDATE notifications SET read = 1 WHERE id = ?').run(req.params.id);
     return res.json({ success: true });

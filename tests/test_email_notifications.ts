@@ -118,5 +118,15 @@ export async function runEmailNotificationsSuite(): Promise<TestItem[]> {
   });
   record('EML-6.7', 'Authentication audit trail verified 100% free of plaintext secrets and passwords', noLeaks);
 
+  // 8. Notifications API: Mark ALL Notifications as Read
+  const markAllRes = await requestApi('PUT', '/api/notifications/read-all', {}, midToken);
+  const unreadRows = (await db.prepare('SELECT COUNT(*) as count FROM notifications WHERE (user_id = ? OR user_id IS NULL) AND read = 0').get(midLogin.body.user.id)) as any;
+  record(
+    'EML-6.8',
+    'All notifications for user marked as read via authenticated PUT /read-all endpoint',
+    markAllRes.status === 200 && Number(unreadRows?.count || 0) === 0,
+    `Status: ${markAllRes.status}, Remaining unread: ${unreadRows?.count}`
+  );
+
   return tests;
 }

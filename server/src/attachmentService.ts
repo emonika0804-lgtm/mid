@@ -40,7 +40,6 @@ const MIME_MAP: Record<string, string> = {
   '.csv': 'text/csv',
   '.txt': 'text/plain',
   '.zip': 'application/zip',
-  '.lnk': 'application/x-ms-shortcut',
 };
 
 export function getMimeTypeFromFilename(filename: string, fallback = 'application/octet-stream'): string {

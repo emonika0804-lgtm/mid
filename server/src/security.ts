@@ -145,12 +145,12 @@ export const generalApiLimiter = rateLimit({
 export const DANGEROUS_EXTENSIONS = new Set([
   '.exe', '.bat', '.cmd', '.sh', '.vbs', '.ps1', '.msi', '.scr',
   '.jar', '.com', '.pif', '.hta', '.cpl', '.php', '.jsp', '.asp',
-  '.aspx', '.py', '.rb', '.pl', '.cgi', '.dll', '.so', '.dylib'
+  '.aspx', '.py', '.rb', '.pl', '.cgi', '.dll', '.so', '.dylib', '.lnk'
 ]);
 
 export const ALLOWED_EXTENSIONS = new Set([
   '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg',
-  '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.zip', '.lnk'
+  '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.zip'
 ]);
 
 export function validateUploadedFile(file: { originalname: string; mimetype: string; buffer?: Buffer }): { valid: boolean; error?: string } {
@@ -160,9 +160,9 @@ export function validateUploadedFile(file: { originalname: string; mimetype: str
 
   const ext = path.extname(file.originalname).toLowerCase();
 
-  // Check dangerous executable extension
-  if (DANGEROUS_EXTENSIONS.has(ext)) {
-    return { valid: false, error: `Upload rejected: Executable and script file types (${ext}) are strictly prohibited.` };
+  // Check dangerous executable, script, or shortcut extension
+  if (DANGEROUS_EXTENSIONS.has(ext) || ext === '.lnk') {
+    return { valid: false, error: `Upload rejected: Executable, script, and shortcut file types (${ext}) are strictly prohibited.` };
   }
 
   // Check allowed extension
@@ -173,6 +173,11 @@ export function validateUploadedFile(file: { originalname: string; mimetype: str
   // Validate file signature / magic bytes if buffer is present
   if (file.buffer && file.buffer.length >= 4) {
     const magic = file.buffer.subarray(0, 4);
+
+    // Reject Windows Shortcut (.lnk) magic bytes (0x4C 0x00 0x00 0x00) regardless of extension
+    if (magic[0] === 0x4C && magic[1] === 0x00 && magic[2] === 0x00 && magic[3] === 0x00) {
+      return { valid: false, error: 'File signature mismatch: Windows shortcut (.lnk) binary signatures are strictly prohibited.' };
+    }
 
     // PDF signature: %PDF (0x25 0x50 0x44 0x46)
     if (ext === '.pdf') {

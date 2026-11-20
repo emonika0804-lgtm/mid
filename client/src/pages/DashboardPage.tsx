@@ -19,10 +19,13 @@ import {
   DollarSign,
   FileText,
   ClipboardList,
+  Download,
+  Calendar,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { StatusBadge } from '../components/StatusBadge';
+import { exportToCsv } from '../utils/csvExport';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -100,14 +103,102 @@ export const DashboardPage: React.FC = () => {
 
   const { claims, surveys, expenses, recoveries } = metrics;
 
+  const handleExportExecutiveSummary = () => {
+    const today = new Date().toISOString().split('T')[0];
+    exportToCsv(
+      `pil_executive_summary_${today}`,
+      [
+        { header: 'Category', accessor: (row) => row.category },
+        { header: 'Metric', accessor: (row) => row.metric },
+        { header: 'Value', accessor: (row) => row.value },
+      ],
+      [
+        { category: 'Claims', metric: 'Total Claims', value: claims.total },
+        { category: 'Claims', metric: 'Open Claims', value: claims.open },
+        { category: 'Claims', metric: 'Closed Claims', value: claims.closed },
+        { category: 'Claims', metric: 'Pending Claims', value: claims.pending },
+        { category: 'Surveys', metric: 'Total Surveys', value: surveys.total },
+        { category: 'Surveys', metric: 'Appointed Surveys', value: surveys.by_status.appointed || 0 },
+        { category: 'Surveys', metric: 'Pending Surveys', value: surveys.by_status.pending || 0 },
+        { category: 'Expenses', metric: 'Total Expenses USD', value: expenses.total },
+        { category: 'Expenses', metric: 'Settled Expenses USD', value: expenses.settled },
+        { category: 'Expenses', metric: 'Outstanding Expenses USD', value: expenses.outstanding },
+        { category: 'Recoveries', metric: 'Total Recoveries USD', value: recoveries.total },
+        { category: 'Recoveries', metric: 'Recovered USD', value: recoveries.recovered },
+        { category: 'Recoveries', metric: 'Outstanding Recovery USD', value: recoveries.outstanding },
+      ]
+    );
+  };
+
+  const handleExportFilteredItems = () => {
+    if (!filterContext) return;
+    const today = new Date().toISOString().split('T')[0];
+    const safeTitle = filterContext.title.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    if (filterContext.section === 'claims') {
+      exportToCsv(
+        `pil_${safeTitle}_${today}`,
+        [
+          { header: 'Claim Number', accessor: (c) => c.claim_number },
+          { header: 'CMS Number', accessor: (c) => c.cms_number || '' },
+          { header: 'BL Number', accessor: (c) => c.bl_number },
+          { header: 'Claimant', accessor: (c) => c.claimant || '' },
+          { header: 'Amount USD', accessor: (c) => c.claim_amount || '' },
+          { header: 'Status', accessor: (c) => c.status },
+          { header: 'Handler', accessor: (c) => c.claims_handler || 'Unassigned' },
+          { header: 'Created Date', accessor: (c) => (c.created_date ? new Date(c.created_date).toLocaleDateString() : '') },
+        ],
+        filterContext.items
+      );
+    } else if (filterContext.section === 'surveys') {
+      exportToCsv(
+        `pil_${safeTitle}_${today}`,
+        [
+          { header: 'Survey Number', accessor: (s) => s.survey_number },
+          { header: 'BL Number', accessor: (s) => s.bl_number },
+          { header: 'Survey Reference', accessor: (s) => s.survey_reference_number || '' },
+          { header: 'Requested By', accessor: (s) => s.survey_requested_by || '' },
+          { header: 'Status', accessor: (s) => s.survey_status },
+          { header: 'Cost USD', accessor: (s) => s.survey_cost || '' },
+          { header: 'Created Date', accessor: (s) => (s.created_date ? new Date(s.created_date).toLocaleDateString() : '') },
+        ],
+        filterContext.items
+      );
+    } else {
+      exportToCsv(
+        `pil_${safeTitle}_${today}`,
+        [
+          { header: 'Claim Number', accessor: (it) => it.claim_number || '' },
+          { header: 'BL Number', accessor: (it) => it.bl_number || '' },
+          { header: 'Type / Source', accessor: (it) => it.expense_type || it.recovery_source || it.liable_party || '' },
+          { header: 'Details', accessor: (it) => it.description || it.remarks || '' },
+          { header: 'Amount USD', accessor: (it) => it.amount || it.recovery_amount || '' },
+          { header: 'Date', accessor: (it) => (it.date || it.created_date ? new Date(it.date || it.created_date).toLocaleDateString() : '') },
+        ],
+        filterContext.items
+      );
+    }
+  };
+
   return (
     <div className="space-y-8">
-      {/* Title */}
-      <div className="border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Executive Dashboard</h1>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Real-time visibility into claims processing, surveyor assignments, and financial recovery exposures.
-        </p>
+      {/* Title & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Executive Dashboard</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Real-time visibility into claims processing, surveyor assignments, and financial recovery exposures.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleExportExecutiveSummary}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer self-start sm:self-auto"
+          title="Export Executive KPI Summary to CSV"
+        >
+          <Download className="w-4 h-4 text-slate-500" />
+          Export Executive Summary
+        </button>
       </div>
 
       {/* 1. CLAIMS SECTION */}
@@ -491,13 +582,24 @@ export const DashboardPage: React.FC = () => {
                 {filterContext.title} ({filterContext.items.length})
               </h3>
             </div>
-            <button
-              type="button"
-              onClick={() => setFilterContext(null)}
-              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportFilteredItems}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                title="Export this filtered list to CSV"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>Export List</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterContext(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-96">

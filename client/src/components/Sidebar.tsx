@@ -8,11 +8,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Ship,
-  Bell,
   FileText,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { StatusBadge } from './StatusBadge';
+import { NotificationCenter } from './NotificationCenter';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -127,6 +127,11 @@ export const Sidebar: React.FC = () => {
             {!collapsed && <span>User Management</span>}
           </NavLink>
         )}
+
+        {/* In-App Notification Center */}
+        <div className="pt-2 border-t border-blue-950/60 mt-2">
+          <NotificationCenter collapsed={collapsed} />
+        </div>
       </nav>
 
       {/* User Avatar & Logout */}

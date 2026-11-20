@@ -9,6 +9,7 @@ import { runEmailNotificationsSuite } from './test_email_notifications';
 import { runFrontendSuite } from './test_frontend';
 import { runDatabaseIntegritySuite } from './test_database_integrity';
 import { runMandatoryAttachmentsSuite } from './test_mandatory_attachments_all';
+import { runSecurityHygieneTests } from './test_security_hygiene';
 
 interface SuiteResult {
   name: string;
@@ -58,6 +59,9 @@ export async function runCompleteAutomatedTestSuite(): Promise<boolean> {
 
     const attResults = await runMandatoryAttachmentsSuite();
     suites.push({ name: '9. Mandatory Attachments Validation', items: attResults });
+
+    const hygieneResults = runSecurityHygieneTests();
+    suites.push({ name: '10. Security Hygiene (SEC-01 & SEC-03)', items: hygieneResults.results });
   } finally {
     await stopTestServer();
   }

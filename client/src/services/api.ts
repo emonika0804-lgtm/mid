@@ -178,6 +178,16 @@ export const api = {
     return data;
   },
 
+  async deleteSurvey(id: string) {
+    const res = await fetch(`/api/surveys/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete survey');
+    return data;
+  },
+
   // Dashboard Metrics
   async getDashboardMetrics() {
     const res = await fetch('/api/dashboard/metrics', {
@@ -260,6 +270,14 @@ export const api = {
 
   async markNotificationRead(id: string) {
     const res = await fetch(`/api/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: getHeaders(),
+    });
+    return res.json();
+  },
+
+  async markAllNotificationsRead() {
+    const res = await fetch('/api/notifications/read-all', {
       method: 'PUT',
       headers: getHeaders(),
     });

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, ShieldAlert, Loader2, CheckCircle2 } from 'lucide-react';
+import { Users, Search, ShieldAlert, Loader2, CheckCircle2, Filter, Download } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { StatusBadge } from '../components/StatusBadge';
+import { exportToCsv } from '../utils/csvExport';
 
 export const UserManagementPage: React.FC = () => {
   const { user, updateUserRole } = useAuth();
@@ -11,6 +12,7 @@ export const UserManagementPage: React.FC = () => {
 
   const [usersList, setUsersList] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -89,6 +91,28 @@ export const UserManagementPage: React.FC = () => {
     );
   }
 
+  const displayedUsers = usersList.filter(
+    (u) => roleFilter === 'all' || u.role === roleFilter
+  );
+
+  const handleExportUsers = () => {
+    const today = new Date().toISOString().split('T')[0];
+    exportToCsv(
+      `pil_users_directory_${today}`,
+      [
+        { header: 'Full Name', accessor: (u) => u.full_name },
+        { header: 'Email', accessor: (u) => u.email },
+        { header: 'Role', accessor: (u) => u.role },
+        { header: 'Verified', accessor: (u) => (u.is_verified ? 'Yes' : 'No') },
+        {
+          header: 'Registered Date',
+          accessor: (u) => (u.created_date ? new Date(u.created_date).toLocaleDateString() : ''),
+        },
+      ],
+      displayedUsers
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Title */}
@@ -106,27 +130,55 @@ export const UserManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Search Toolbar */}
+      {/* Search & Filter Toolbar */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:w-80">
-            <input
-              type="text"
-              placeholder="Search by full name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && loadUsers()}
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+          <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                placeholder="Search by full name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && loadUsers()}
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Roles</option>
+                <option value="agency">Agency</option>
+                <option value="mid">MID</option>
+                <option value="mid_gcc">MID GCC</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadUsers}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium cursor-pointer"
+            >
+              Search
+            </button>
           </div>
 
           <button
             type="button"
-            onClick={loadUsers}
-            className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium cursor-pointer"
+            onClick={handleExportUsers}
+            disabled={displayedUsers.length === 0}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 self-start sm:self-auto"
+            title="Export User Directory to CSV"
           >
-            Search Users
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Export CSV</span>
           </button>
         </div>
 
@@ -150,14 +202,14 @@ export const UserManagementPage: React.FC = () => {
                     Loading user directory...
                   </td>
                 </tr>
-              ) : usersList.length === 0 ? (
+              ) : displayedUsers.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-slate-400">
                     No users matching criteria.
                   </td>
                 </tr>
               ) : (
-                usersList.map((u) => {
+                displayedUsers.map((u) => {
                   const isCurrent = u.id === user?.id;
                   return (
                     <tr key={u.id} className="hover:bg-slate-50 transition-colors">

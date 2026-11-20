@@ -342,6 +342,13 @@ router.post('/:id/convert-to-claim', authenticate, requireRole(['mid', 'mid_gcc'
       [`aud-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`, claimId, claimNumber, user.id, user.full_name, `Claim created from Survey ${survey.survey_number}`, now]
     );
 
+    // Notification for conversion
+    await client.query(
+      `INSERT INTO notifications (id, type, message, claim_id, user_id, read, created_date)
+       VALUES ($1, 'survey_conversion', $2, $3, $4, 0, $5)`,
+      [`notif-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`, `Survey ${survey.survey_number} was converted to Claim ${claimNumber} by ${user.full_name}`, claimId, survey.created_by_id, now]
+    );
+
     await client.query('COMMIT');
 
     // Sync attachments metadata for newly created claim
@@ -629,6 +636,13 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response) 
         `INSERT INTO audit_logs (id, entity_type, entity_id, entity_number, action, performed_by, performed_by_name, details, created_date)
          VALUES ($1, 'Survey', $2, $3, 'CREATE', $4, $5, $6, $7)`,
         [`aud-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`, surveyId, surveyNumber, user.id, user.full_name, `Survey request ${surveyNumber} created for BL ${newSurvey.bl_number}`, now]
+      );
+
+      // Notification in same transaction
+      await client.query(
+        `INSERT INTO notifications (id, type, message, claim_id, user_id, read, created_date)
+         VALUES ($1, 'survey', $2, $3, $4, 0, $5)`,
+        [`notif-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`, `New survey request ${surveyNumber} created by ${user.full_name}`, body.originating_claim_id || body.claim_id || null, user.id, now]
       );
 
       await client.query('COMMIT');
@@ -963,6 +977,26 @@ router.get('/:id/audit', authenticate, async (req: AuthenticatedRequest, res: Re
 
   const logs = await db.prepare('SELECT * FROM audit_logs WHERE entity_id = ? ORDER BY created_date DESC').all(id);
   return res.json(logs);
+});
+
+// 7. Delete survey (MID/Admin only)
+router.delete('/:id', authenticate, requireRole(['mid', 'mid_gcc', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const user = req.user!;
+
+  const existing = (await db.prepare('SELECT * FROM surveys WHERE id = ?').get(id)) as any;
+  if (!existing) {
+    return res.status(404).json({ error: 'Survey not found' });
+  }
+
+  await db.prepare('DELETE FROM surveys WHERE id = ?').run(id);
+
+  await db.prepare(`
+    INSERT INTO audit_logs (id, entity_type, entity_id, entity_number, action, performed_by, performed_by_name, details, created_date)
+    VALUES (?, 'Survey', ?, ?, 'DELETE', ?, ?, ?, ?)
+  `).run(`aud-${Date.now()}`, id, existing.survey_number, user.id, user.full_name, `Survey ${existing.survey_number} deleted`, new Date().toISOString());
+
+  return res.json({ message: 'Survey deleted successfully' });
 });
 
 export default router;

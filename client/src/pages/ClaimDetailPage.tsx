@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Loader2,
   Edit3,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -122,6 +123,7 @@ export const ClaimDetailPage: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isLmsFetching, setIsLmsFetching] = useState(false);
   const [lmsFetched, setLmsFetched] = useState(false);
   const [lmsError, setLmsError] = useState<string | null>(null);
@@ -325,6 +327,22 @@ export const ClaimDetailPage: React.FC = () => {
     }
   };
 
+  // Delete Claim (MID/Admin only)
+  const handleDeleteClaim = async () => {
+    if (!window.confirm(`Are you sure you want to delete claim ${claim.claim_number}? This action cannot be undone.`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await api.deleteClaim(id!);
+      alert(`Claim ${claim.claim_number} deleted successfully.`);
+      navigate('/');
+    } catch (err: any) {
+      alert(`Failed to delete claim: ${err.message || err}`);
+      setIsDeleting(false);
+    }
+  };
+
   // Reroute to Survey (Rule 13)
   const handleRerouteToSurvey = () => {
     if (claim.originating_survey_id) {
@@ -386,6 +404,19 @@ export const ClaimDetailPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {!isNew && isMid && (
+              <button
+                type="button"
+                onClick={handleDeleteClaim}
+                disabled={isDeleting || isSaving}
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                title="Delete Claim (MID/Admin)"
+              >
+                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>Delete</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleSaveClaim}
@@ -1030,12 +1061,19 @@ export const ClaimDetailPage: React.FC = () => {
                 blNumber={claim.bl_number}
                 emailThread={claim.email_thread || []}
                 canEdit={true}
-                onSendEmail={(msg) =>
-                  setClaim({ ...claim, email_thread: [...(claim.email_thread || []), msg] })
-                }
-                onUpdateEmails={(uEmail, vEmail) =>
-                  setClaim({ ...claim, user_email: uEmail, vendor_email: vEmail })
-                }
+                onSendEmail={(msg) => {
+                  const updatedThread = [...(claim.email_thread || []), msg];
+                  setClaim({ ...claim, email_thread: updatedThread });
+                  if (!isNew && id) {
+                    api.updateClaim(id, { email_thread: updatedThread });
+                  }
+                }}
+                onUpdateEmails={(uEmail, vEmail) => {
+                  setClaim({ ...claim, user_email: uEmail, vendor_email: vEmail });
+                  if (!isNew && id) {
+                    api.updateClaim(id, { user_email: uEmail, vendor_email: vEmail });
+                  }
+                }}
               />
             </SectionCard>
 

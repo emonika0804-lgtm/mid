@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Loader2,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -90,6 +91,7 @@ export const SurveyDetailPage: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [isLmsFetching, setIsLmsFetching] = useState(false);
   const [lmsFetched, setLmsFetched] = useState(false);
@@ -309,6 +311,22 @@ export const SurveyDetailPage: React.FC = () => {
     }
   };
 
+  // Delete Survey (MID/Admin only)
+  const handleDeleteSurvey = async () => {
+    if (!window.confirm(`Are you sure you want to delete survey ${survey.survey_number}? This action cannot be undone.`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await api.deleteSurvey(id!);
+      alert(`Survey ${survey.survey_number} deleted successfully.`);
+      navigate('/');
+    } catch (err: any) {
+      alert(`Failed to delete survey: ${err.message || err}`);
+      setIsDeleting(false);
+    }
+  };
+
   const totalExpenses = (survey.expense_tally_records || []).reduce(
     (acc: number, r: TallyRecord) => acc + (Number(r.amount_usd) || 0),
     0
@@ -369,6 +387,19 @@ export const SurveyDetailPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {!isNew && isMid && (
+              <button
+                type="button"
+                onClick={handleDeleteSurvey}
+                disabled={isDeleting || isSaving}
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                title="Delete Survey (MID/Admin)"
+              >
+                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>Delete</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleSaveSurvey}
