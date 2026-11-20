@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Filter, RefreshCw, FileText, ClipboardList, Download } from 'lucide-react';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/StatusBadge';
@@ -10,13 +10,25 @@ import { exportToCsv } from '../utils/csvExport';
 export const LandingPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
 
-  const [activeTab, setActiveTab] = useState<'claims' | 'surveys'>('claims');
+  const [activeTab, setActiveTab] = useState<'claims' | 'surveys'>(
+    tabParam === 'surveys' ? 'surveys' : 'claims'
+  );
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [claims, setClaims] = useState<any[]>([]);
   const [surveys, setSurveys] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (tabParam === 'surveys' && activeTab !== 'surveys') {
+      setActiveTab('surveys');
+    } else if (tabParam === 'claims' && activeTab !== 'claims') {
+      setActiveTab('claims');
+    }
+  }, [tabParam]);
 
   const loadData = async () => {
     setIsLoading(true);

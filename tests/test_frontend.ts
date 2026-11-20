@@ -89,12 +89,24 @@ export async function runFrontendSuite(): Promise<TestItem[]> {
 
   record('UI-7.9', 'DocumentSearchPage integrates multi-filter search, pagination, and authenticated preview modal', hasDocFiltersAndPreview);
 
-  // 10. Component Verification: Sidebar Navigation & Role Isolation
+  // 10. Component Verification: Sidebar Navigation, Role Isolation & Notification Portal Positioning
   const sidebarPath = path.resolve(__dirname, '../client/src/components/Sidebar.tsx');
   const sidebarSrc = fs.existsSync(sidebarPath) ? fs.readFileSync(sidebarPath, 'utf-8') : '';
-  const hasRoleGating = sidebarSrc.includes('isAdmin') && sidebarSrc.includes('isMid');
+  const notifCenterPath = path.resolve(__dirname, '../client/src/components/NotificationCenter.tsx');
+  const notifCenterSrc = fs.existsSync(notifCenterPath) ? fs.readFileSync(notifCenterPath, 'utf-8') : '';
 
-  record('UI-7.10', 'Sidebar dynamically hides Dashboard and User Management navigation for Agency roles', hasRoleGating);
+  const hasRoleGating = sidebarSrc.includes('isAdmin') && sidebarSrc.includes('isMid');
+  const hasPortalAndOverflowShield =
+    sidebarSrc.includes('overflow-x-hidden') &&
+    notifCenterSrc.includes('createPortal') &&
+    notifCenterSrc.includes('updatePosition');
+
+  record(
+    'UI-7.10',
+    'Sidebar RBAC gating and NotificationCenter portal positioning with overflow-x immunity',
+    hasRoleGating && hasPortalAndOverflowShield,
+    `Role gating: ${hasRoleGating}, Portal & overflow shield: ${hasPortalAndOverflowShield}`
+  );
 
   // 11. Open Redirect Sanitizer: Malicious, protocol-relative, external, and malformed inputs rejected
   const maliciousInputs = [
