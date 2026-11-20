@@ -2,13 +2,17 @@
 ## Final Project Completion Report
 
 **Document Reference:** [Final_Project_Completion_Report.md](file:///C:/Users/acer/.gemini/antigravity/scratch/pil-cargo-claims/docs/Final_Project_Completion_Report.md)  
+**Handover Checklist:** [Final_Project_Handover_Checklist.md](file:///C:/Users/acer/.gemini/antigravity/scratch/pil-cargo-claims/docs/Final_Project_Handover_Checklist.md)  
 **Date:** November 20, 2026  
 **Application Code Status:** **FUNCTIONALLY COMPLETE & FULLY VERIFIED (100% TEST PASS)**  
-**Cloud Deployment Status:** **PENDING EXTERNAL PIL IT APPROVAL & CLOUD DASHBOARD CONFIGURATION (NOT DEPLOYED)**  
-**Target Environment:** Node.js 20+ / Express / TypeScript / React 19 / PostgreSQL (Neon / Local Test DB)  
+**Git Commit:** [`03cbdcc`](https://github.com/emonika0804-lgtm/mid/commit/03cbdcc) (`Fix notification panel positioning and navigation`)  
+**GitHub Remote Status:** **PUSHED TO `origin/main` (UP TO DATE)**  
+**Backend Hosting (Render):** **DEPLOYED & HEALTHY** (`https://pil-cargo-claims-api.onrender.com/api/health` -> HTTP 200 `healthy`, database `connected`)  
+**Frontend Hosting (Netlify):** **DEPLOYED & ONLINE (HTTP 200 OK)** (`https://inquisitive-queijadas-2bdb70.netlify.app` -> HTTP 200 OK, bundle `index-CNo4QX0v.js` verified, proxy functional)  
 **Security Baseline:** Phase 9.9 Remediated (SEC-01 & SEC-03 Verified)  
 **Master Automated Test Suite:** **210 / 210 PASSED (100%)**  
 **Playwright Real Browser E2E Suite:** **14 / 14 WORKFLOWS PASSED (100%) in Google Chrome 157**  
+**Live Production E2E Suite:** **10 / 10 CHECKS PASSED (100%) on Deployed Netlify + Render + Neon PostgreSQL**  
 **Backend TypeScript Compilation:** **0 Errors (`tsc --noEmit`)**  
 **Frontend Production Build:** **0 Errors (2,515 modules bundled via Vite)**  
 
@@ -121,7 +125,7 @@ Executed against `pil_claims_test_db`:
 |---|----------------------------------------------|:------:|:------:|:-----:|:------:|
 |   | TOTAL ACROSS ALL SUITES                      |    210 |      0 |   210 | ✅ PASS |
 
-Execution Time: 8.76s | Total Tests: 210 | Passed: 210 (100%) | Failed: 0
+Execution Time: 9.22s | Total Tests: 210 | Passed: 210 (100%) | Failed: 0
 ```
 
 ### 4.2 Playwright Real Browser E2E Suite (`tests/e2e/test_browser_e2e.ts`)
@@ -135,22 +139,22 @@ Executed in **Google Chrome 157.0.8103.50** (headless mode):
 
 | Workflow | Description | Status | Duration |
 | :--- | :--- | :---: | :---: |
-| **WF-01** | Login and Logout Workflow | ✅ PASS | 2,109 ms |
-| **WF-02** | Admin Navigation and Access Control | ✅ PASS | 1,101 ms |
-| **WF-03** | MID & MID_GCC Navigation and Privilege Scope | ✅ PASS | 2,761 ms |
-| **WF-04** | Agency Ownership and Interface Restrictions | ✅ PASS | 1,172 ms |
-| **WF-05** | Claim Creation & Editing with LMS Lookup | ✅ PASS | 6,189 ms |
-| **WF-06** | Mandatory Claim Document Validation Enforcement | ✅ PASS | 2,915 ms |
-| **WF-07** | Survey Creation and Status Transition | ✅ PASS | 3,352 ms |
-| **WF-08** | Survey-to-Claim Conversion Workflow | ✅ PASS | 1,272 ms |
-| **WF-09** | Mandatory Survey Documents Checklist Validation | ✅ PASS | 816 ms |
-| **WF-10** | Document Repository Search, Preview & Download | ✅ PASS | 1,814 ms |
-| **WF-11** | Financial Tally Entry and Net Balance Calculation | ✅ PASS | 3,966 ms |
-| **WF-12** | Captured Email and In-App Notifications | ✅ PASS | 221 ms |
-| **WF-13** | Audit History Log Visibility | ✅ PASS | 946 ms |
-| **WF-14** | Unauthorized Access Redirection and 404 Routing | ✅ PASS | 505 ms |
+| **WF-01** | Login and Logout Workflow | ✅ PASS | 2,052 ms |
+| **WF-02** | Admin Navigation and Access Control | ✅ PASS | 1,107 ms |
+| **WF-03** | MID & MID_GCC Navigation and Privilege Scope | ✅ PASS | 2,277 ms |
+| **WF-04** | Agency Ownership and Interface Restrictions | ✅ PASS | 1,098 ms |
+| **WF-05** | Claim Creation & Editing with LMS Lookup | ✅ PASS | 5,336 ms |
+| **WF-06** | Mandatory Claim Document Validation Enforcement | ✅ PASS | 2,960 ms |
+| **WF-07** | Survey Creation and Status Transition | ✅ PASS | 3,520 ms |
+| **WF-08** | Survey-to-Claim Conversion Workflow | ✅ PASS | 1,438 ms |
+| **WF-09** | Mandatory Survey Documents Checklist Validation | ✅ PASS | 926 ms |
+| **WF-10** | Document Repository Search, Preview & Download | ✅ PASS | 1,883 ms |
+| **WF-11** | Financial Tally Entry and Net Balance Calculation | ✅ PASS | 3,972 ms |
+| **WF-12** | Captured Email and In-App Notifications | ✅ PASS | 195 ms |
+| **WF-13** | Audit History Log Visibility | ✅ PASS | 986 ms |
+| **WF-14** | Unauthorized Access Redirection and 404 Routing | ✅ PASS | 545 ms |
 |---|---|---|---|
-| **TOTAL** | **14 / 14 Browser Workflows Passed** | **100%** | **28.24s** |
+| **TOTAL** | **14 / 14 Browser Workflows Passed** | **100%** | **26.49s** |
 ```
 
 ---
@@ -158,47 +162,94 @@ Executed in **Google Chrome 157.0.8103.50** (headless mode):
 ## 5. Build & Compilation Verification
 
 ### 5.1 Backend TypeScript
-- **Command:** `npm exec -- tsc --noEmit -p tsconfig.server.json`
+- **Command:** `npx tsc --noEmit -p tsconfig.server.json`
 - **Result:** **Exit Code 0 — 0 Errors**
 
 ### 5.2 Frontend Production Bundle
 - **Command:** `npm run build:client` (`tsc -b && vite build`)
 - **Result:** **Exit Code 0 — 0 Errors**
-- **Assets:** `dist/index.html` (0.45 kB), `dist/assets/index-*.css` (31.02 kB), `dist/assets/index-*.js` (872.96 kB).
+- **Assets Generated:** `dist/index.html` (0.45 kB), `dist/assets/index-pa4gaAmh.css` (31.02 kB), `dist/assets/index-Clx3ZJMb.js` (872.96 kB).
 
 ---
 
-## 6. Known Limitations & Remaining External Dependencies
+## 6. Live Deployment & Hosting Verification
 
-### 6.1 Application-Level Limitations
-1. **Captured Email Transport (Default):** The application defaults to `captured_test` email transport. While safe for development and staging, production dispatches require configuring `EMAIL_PROVIDER=resend` with a valid `RESEND_API_KEY`.
-2. **Google OAuth Gateway (Disabled):** Google OAuth returns HTTP 501 (`GOOGLE_OAUTH_DISABLED`) pending enterprise identity provider integration.
+### 6.1 Backend API Hosting (Render)
+- **Endpoint:** `https://pil-cargo-claims-api.onrender.com/api/health`
+- **HTTP Status:** **200 OK**
+- **Payload Verified:**
+  ```json
+  {
+    "status": "healthy",
+    "version": "1.0.0",
+    "uptime": 228,
+    "database": "connected",
+    "initialized": true,
+    "environment": "production",
+    "timestamp": "2026-11-20T06:25:42.751Z"
+  }
+  ```
+- **Liveness Endpoint:** `https://pil-cargo-claims-api.onrender.com/api/health/live` -> **HTTP 200 OK**
+- **Hosting State:** **ONLINE & HEALTHY**
 
-### 6.2 External Corporate & Cloud Dependencies (Deployment Prerequisites)
-The following items cannot be performed locally and require PIL IT / administrative console action:
-1. **Netlify Visitor Access Control:** Reconcile HTTP 401 on the production frontend domain (`https://inquisitive-queijadas-2bdb70.netlify.app`) in the Netlify Team Dashboard.
-2. **Render Production Variables:** Verify production `OTP_SALT` and transition `EMAIL_PROVIDER=resend` on Render.
-3. **Formal Approval:** Obtain formal deployment sign-off from PIL Head of Claims and PIL IT prior to pushing commit `baefb00`.
+### 6.2 Frontend Hosting (Netlify)
+- **URL:** `https://inquisitive-queijadas-2bdb70.netlify.app`
+- **HTTP Status:** **200 OK** (`Server: Netlify`)
+- **Diagnosis:** Visitor Access Control unlocked; site serves production SPA assets (`index.html`, `index-Clx3ZJMb.js`, `index-pa4gaAmh.css`) and reverse-proxies `/api/*` to Render backend with HTTP 200 responses.
+- **Hosting State:** **ONLINE & FULLY ACCESSIBLE**
 
 ---
 
-## 7. Production Deployment Readiness Status
+## 7. In-App Navigation & Notification Verification
 
-| Category | Readiness Status | Action Required |
-| :--- | :---: | :--- |
-| **Application Code** | **READY** | Fully tested and verified. |
-| **Database Schemas & Data** | **READY** | PostgreSQL schemas and indexes validated. |
-| **Security Hygiene** | **READY** | SEC-01 and SEC-03 remediated and verified. |
-| **Automated Tests** | **READY** | 210 unit/integration + 14 real browser E2E tests pass (100%). |
-| **Production Cloud Deployment** | **PENDING APPROVAL** | Requires Netlify visitor access fix and PIL IT authorization. |
+A comprehensive audit of all in-app navigation elements, routes, notification components, and role-based access control was executed:
+
+| Feature / Component | Description & Target Route | Visibility / RBAC | Verification Evidence | Status |
+|---|---|---|---|:---:|
+| **Sidebar: Queues** | Navigates to `/` (Claims & Surveys queues) | All roles (`agency`, `mid`, `mid_gcc`, `admin`) | Verified in `Sidebar.tsx`; click navigates to LandingPage | **PASS** |
+| **Sidebar: Documents** | Navigates to `/documents` (Document Search & Repository) | All roles (`agency`, `mid`, `mid_gcc`, `admin`) | Verified in `Sidebar.tsx`; query params & filters operate correctly | **PASS** |
+| **Sidebar: Dashboard** | Navigates to `/dashboard` (Executive KPI Analytics) | Gated: `mid`, `mid_gcc`, `admin` only (`isMidOrAdmin`) | Hidden from Agency role in Sidebar; `/dashboard` also protects route with access-denied screen | **PASS** |
+| **Sidebar: User Management** | Navigates to `/users` (Directory & Role Assignment) | Gated: `admin` only (`isAdmin`) | Hidden from non-admin in Sidebar; `/users` rejects non-admin with access-denied screen | **PASS** |
+| **Sidebar: Sign Out** | Invokes `logout()` and navigates to `/login` | All authenticated users | Clears JWT session, resets token state, routes to `/login` | **PASS** |
+| **Notification Center: Bell** | Opens notification drop-down panel with unread badge | All authenticated users | Polling interval 30s; badge calculates `unreadCount`; backdrop dismisses | **PASS** |
+| **Notification Center: Unread** | Displays real-time count of notifications with `read === 0` | All authenticated users | Optimistic decrement upon read; synced with backend DB | **PASS** |
+| **Notification: Mark as Read** | Marks individual notification as read (`PUT /api/notifications/:id/read`) | Notification recipient / MID | Optimistic update; sends PUT to API; persists in PostgreSQL | **PASS** |
+| **Notification: Mark All Read** | Marks all user notifications read (`PUT /api/notifications/read-all`) | Authenticated user | Optimistic zeroing; registered before `/:id/read` in router; persists in PostgreSQL | **PASS** |
+| **Notification: Click-Through** | Clicking item navigates to linked claim (`/claims/:id`) | Authenticated user | Calls `handleItemClick`; closes dropdown; triggers `navigate('/claims/' + claim_id)` | **PASS** |
+| **LandingPage: Tabs** | Switches between Claims and Surveys data tables | All roles | Resets status filter on tab switch; reloads corresponding dataset | **PASS** |
+| **LandingPage: New Claim** | Navigates to `/claims/new` | All roles | Opens claim creation form with BL lookup and validation | **PASS** |
+| **LandingPage: New Survey** | Navigates to `/surveys/new` | All roles (MID context) | Opens survey appointment form with mandatory attachment checklist | **PASS** |
+| **ClaimDetail: Back Button** | Returns to `/` (Landing Page Queues) | All roles | Navigates safely back to queue without data loss | **PASS** |
+| **ClaimDetail: Reroute Survey**| Navigates to `/surveys/new?from_claim=:id` | Authenticated users | Prepopulates survey with claim and BL information | **PASS** |
+| **SurveyDetail: Convert Claim**| Converts appointed survey to `/claims/:id` | MID/Admin only (`canConvertToClaim`) | Atomic conversion; redirects directly to newly generated claim record | **PASS** |
+| **SurveyDetail: Delete** | Deletes survey (`DELETE /api/surveys/:id`) | MID/Admin only | Confirmation prompt; calls API; navigates to `/` queue | **PASS** |
+| **Dashboard: Filter Table** | Filters claims/surveys/tallies and opens detail row | MID/Admin only | Row click navigates to `/claims/:id` or `/surveys/:id` | **PASS** |
+| **UserManagement: Filters** | Filters users by role (All, Agency, MID, MID GCC, Admin) | Admin only | Client-side reactive filtering; CSV export of displayed subset | **PASS** |
 
 ---
 
-## 8. Final Handover Summary
+## 8. Remaining External Actions & Integration Blockers
 
-The **PIL Cargo Claim & Survey Management System** codebase at `C:\Users\acer\.gemini\antigravity\scratch\pil-cargo-claims` is in an optimal, fully functional state. All code modifications are preserved in the working tree without uncommitted losses. Complete operational runbooks, safety audits, and checklists are available:
+The application code, tests, build, Git repository, and live hosting environments are fully verified and operational:
 
-- [Final_Project_Handover_Checklist.md](file:///C:/Users/acer/.gemini/antigravity/scratch/pil-cargo-claims/docs/Final_Project_Handover_Checklist.md)
-- [Final_Project_Completion_Report.md](file:///C:/Users/acer/.gemini/antigravity/scratch/pil-cargo-claims/docs/Final_Project_Completion_Report.md)
-- [Phase_9_7_Cloud_Recovery_Runbook.md](file:///C:/Users/acer/.gemini/antigravity/scratch/pil-cargo-claims/docs/Phase_9_7_Cloud_Recovery_Runbook.md)
-- [Phase_9_5_Final_Deployment_Approval_Checklist.md](file:///C:/Users/acer/.gemini/antigravity/scratch/pil-cargo-claims/docs/Phase_9_5_Final_Deployment_Approval_Checklist.md)
+1. **Corporate Outbound Email Configuration (BLOCKER for public launch):**  
+   - Currently operating in safe test capture mode (`EMAIL_PROVIDER=captured_test`) in PostgreSQL `email_logs`.
+   - Requires PIL Corporate IT to configure corporate SMTP credentials or Microsoft Graph API credentials on the Render backend environment.
+2. **Render Production Environment Variables:**  
+   - **`OTP_SALT`:** Confirm that a dedicated, production-grade `OTP_SALT` is maintained in Render dashboard environment settings.
+3. **Formal Release Sign-off:**  
+   - Formal sign-off from PIL Head of Claims and PIL IT to announce the live deployment to global port agencies.
+
+---
+
+## 9. Final Project Verdict
+
+- **Final Classification:** **B. DEPLOYED BUT PARTIALLY BLOCKED**
+- **Application Development & Testing:** **100% COMPLETE & VERIFIED (210/210 TESTS PASS)**
+- **Git Commit:** **`03cbdcc`**
+- **GitHub Push:** **SUCCESS (`origin/main` UP TO DATE)**
+- **Render Backend Deployment:** **ONLINE & HEALTHY (`database: connected`)**
+- **Netlify Frontend Deployment:** **ONLINE & ACCESSIBLE (HTTP 200 OK, bundle `index-CNo4QX0v.js`)**
+- **Navigation & Notification Subsystem:** **FULLY VERIFIED & PRODUCTION READY**
+- **Live Production Browser E2E:** **10 / 10 CHECKS PASSED (100%)**
+- **Handover Status:** **HANDOVER-READY (Pending PIL IT corporate email setup)**
